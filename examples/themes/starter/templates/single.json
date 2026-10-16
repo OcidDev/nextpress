@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    { "block": "core/template-part", "props": { "slug": "header" } },
+    {
+      "block": "core/group",
+      "props": { "tagName": "article" },
+      "children": [
+        {
+          "block": "core/group",
+          "props": { "tagName": "header" },
+          "children": [
+            { "block": "core/post-title", "props": { "level": 1 } },
+            {
+              "block": "core/post-meta",
+              "props": { "showAuthor": true, "showDate": true }
+            }
+          ]
+        },
+        { "block": "core/post-featured-image", "props": { "aspectRatio": "original" } },
+        { "block": "core/post-toc", "props": { "open": true, "title": "Daftar isi" } },
+        { "block": "core/post-content" },
+        { "block": "core/post-share" },
+        { "block": "core/post-author", "props": { "showBio": true } }
+      ]
+    },
+    { "block": "core/widget-area", "props": { "slot": "article-after" } },
+    { "block": "core/related-posts", "props": { "limit": 3 } },
+    { "block": "core/comments" },
+    { "block": "core/template-part", "props": { "slug": "footer" } }
+  ]
+}

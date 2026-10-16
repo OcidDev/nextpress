@@ -1,4 +1,7 @@
-import { SiteFrame } from '@/components/site/SiteFrame'
+import { effectiveContentSeo } from '@/lib/plugins/content-seo-server'
+import { ContentSeoSchema } from '@/components/post/ContentSeoSchema'
+import { articleBlockContext } from '@/lib/blocks/load'
+import { ThemePage } from '@/lib/themes/ThemePage'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { siteConfig } from '@/data/site-config'
@@ -16,16 +19,19 @@ export async function generateMetadata({
   const post = await getPostBySlug((await params).slug)
   if (!post) return { title: 'Artikel tidak ditemukan', robots: { index: false } }
   const settings = await getSettings()
-  const title = post.title
-  const description = post.excerpt
-  const url = new URL(post.permalink || `/blog/${post.slug}`, siteConfig.url).href
-  const imageUrl = new URL(post.featuredImage || '/opengraph-image', siteConfig.url).href
+  const seo = await effectiveContentSeo(post.seo)
+  const title = seo.title || post.title
+  const description = seo.description || post.excerpt
+  const url = seo.canonical || new URL(post.permalink || `/blog/${post.slug}`, siteConfig.url).href
+  const image = seo.ogImage || post.featuredImage
+  const imageUrl = new URL(image || '/opengraph-image', siteConfig.url).href
   return {
     metadataBase: null,
     title,
     description,
+    keywords: seo.keywords,
     alternates: { canonical: url },
-    robots: !settings.blogPublic ? { index: false, follow: true } : undefined,
+    robots: !settings.blogPublic || seo.noIndex ? { index: false, follow: true } : undefined,
     openGraph: {
       type: 'article',
       title,
@@ -47,8 +53,14 @@ export default async function Article({ params }: { params: Promise<{ slug: stri
   const post = await getPostBySlug((await params).slug)
   if (!post) notFound()
   return (
-    <SiteFrame>
-      <ArticleContent post={post} />
-    </SiteFrame>
+    <>
+      <ContentSeoSchema post={post} />
+      <ThemePage
+        query={{ kind: 'single', slug: post.slug, id: post.id }}
+        context={await articleBlockContext(post)}
+      >
+        <ArticleContent post={post} />
+      </ThemePage>
+    </>
   )
 }

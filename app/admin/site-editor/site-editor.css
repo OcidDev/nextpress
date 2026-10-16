@@ -1,0 +1,262 @@
+.adminRoot:has(.siteEditor) {
+  background: #1e1e1e;
+  min-height: 100dvh;
+}
+.siteEditor {
+  --editor-border: #414141;
+  min-height: 100dvh;
+  background: #1e1e1e;
+  color: #f0f0f0;
+}
+.siteEditorHeader {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--editor-border);
+}
+.siteEditorHeader a {
+  color: #eee;
+  font-size: 14px;
+  text-decoration: none;
+}
+.siteEditorHeader a:last-child {
+  margin-left: auto;
+}
+.siteEditorHeader h1 {
+  font-size: 17px;
+  margin: 0 0 4px;
+  color: #fff;
+}
+.siteEditorHeader span {
+  font-size: 12px;
+  color: #bdbdbd;
+}
+.siteEditor .adminActions,
+.siteEditor .appearanceToolbar {
+  margin: 0;
+  padding: 12px 24px;
+  background: #272727;
+  border: 0;
+  border-radius: 0;
+}
+.siteEditor .siteEditorActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.siteEditorStatus {
+  margin-right: auto;
+  font-size: 13px;
+}
+.siteEditor button,
+.siteEditor .button {
+  border-radius: 4px;
+  font-size: 13px;
+  padding: 9px 12px;
+}
+.siteEditor button:disabled {
+  opacity: 0.5;
+}
+.siteEditor .themeCustomizerWorkspace,
+.siteEditor .appearanceWorkspace {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+  align-items: start;
+}
+.siteEditor .themeCustomizerControls,
+.siteEditor .appearanceControls {
+  padding: 24px;
+  max-height: calc(100dvh - 150px);
+  overflow-y: auto;
+  background: #1e1e1e;
+  border: 0;
+  color: #eee;
+  border-radius: 0;
+}
+.siteEditor h2 {
+  color: inherit;
+  font-size: 24px;
+  margin: 0 0 12px;
+}
+.siteEditor .themeCustomizerControls > p,
+.siteEditor .appearanceControls > p {
+  font-size: 13px;
+  color: #bdbdbd;
+  line-height: 1.6;
+}
+.siteEditor .themeCustomizerGroup {
+  background: transparent;
+  border: 1px solid #484848;
+  margin-top: 20px;
+}
+.siteEditor .themeCustomizerGroup legend {
+  color: #eee;
+  font-size: 14px;
+}
+.siteEditor .themeCustomizerField label,
+.siteEditor .appearanceControls label {
+  color: #e2e2e2;
+  font-size: 13px;
+}
+.siteEditor .themeCustomizerControls input,
+.siteEditor .themeCustomizerControls select {
+  color: #eee;
+  background: #303030;
+  border-color: #606060;
+}
+.siteEditor .themeCustomizerControls input[type='range'] {
+  accent-color: #c7a4ff;
+}
+.siteEditor .themeCustomizerPresets button {
+  background: #303030;
+  color: white;
+  border: 1px solid #666;
+}
+.siteEditor .themeCustomizerPreview,
+.siteEditor .appearancePreview {
+  position: sticky;
+  top: 12px;
+  margin: 16px 20px 20px 0;
+  padding: 0;
+  border: 0;
+  background: #e5e5e5;
+  color: #202020;
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 0;
+}
+.siteEditor .appearancePreviewHeading {
+  padding: 12px 16px;
+  align-items: center;
+  background: #f5f5f5;
+}
+.siteEditor .appearancePreviewHeading h2 {
+  font-size: 14px;
+  margin: 0;
+}
+.siteEditor .themeCustomizerPreview > .appearanceHint {
+  padding: 0 16px;
+  color: #555;
+  font-size: 12px;
+}
+.siteEditor .themeCustomizerPreview iframe {
+  display: block;
+  border: 0;
+  border-radius: 0;
+  height: calc(100dvh - 245px);
+  min-height: 420px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: white;
+}
+.siteEditor .appearanceHint {
+  color: #bdbdbd;
+}
+.siteEditor .siteEditorBody > [role],
+.siteEditor > [role],
+.siteEditor .appearanceNotice,
+.siteEditor .appearanceUnsaved {
+  margin: 0;
+  padding: 10px 24px;
+}
+.siteEditor .adminError {
+  color: #ffc4c4;
+}
+.siteEditor .siteEditorPanelClosed .themeCustomizerControls {
+  display: none;
+}
+.siteEditor .siteEditorPanelClosed .themeCustomizerWorkspace {
+  grid-template-columns: minmax(0, 1fr);
+  padding-left: 20px;
+}
+.siteEditor .appearanceTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.siteEditor .appearanceTabs button {
+  text-align: left;
+  color: #ddd;
+  background: transparent;
+  border: 0;
+}
+.siteEditor .appearanceTabs button[aria-selected='true'] {
+  color: white;
+  background: #444;
+}
+.siteEditor .appearancePresets,
+.siteEditor .appearanceFieldset,
+.siteEditor .appearanceEditorCard {
+  color: #222;
+}
+.siteEditor .appearancePreview > .appearanceHint,
+.siteEditor .appearancePreview .appearanceDevices {
+  padding: 8px 16px;
+  color: #555;
+}
+.siteEditorEmpty {
+  padding: 32px;
+}
+.siteEditor .appearanceToolbar small,
+.siteEditor .appearanceToolbar .appearanceState,
+.siteEditor .siteEditorBody > [role='status'] {
+  color: #b6dfca;
+}
+.siteEditor .appearanceControls :is(h3, legend),
+.siteEditor .appearancePresets,
+.siteEditor .appearanceRecovery {
+  color: #eee;
+}
+.siteEditor .appearanceItem :is(label, p, h3, legend) {
+  color: #2e3338;
+}
+.siteEditor .appearanceItem .appearanceHint {
+  color: #59636d;
+}
+.siteEditor :focus-visible {
+  outline: 2px solid #a878ee;
+  outline-offset: 3px;
+}
+@media (max-width: 780px) {
+  .siteEditorHeader {
+    padding: 12px;
+    gap: 12px;
+  }
+  .siteEditorHeader h1 {
+    font-size: 14px;
+  }
+  .siteEditorHeader a:last-child {
+    display: none;
+  }
+  .siteEditor .adminActions,
+  .siteEditor .appearanceToolbar {
+    padding: 12px;
+  }
+  .siteEditor .themeCustomizerWorkspace,
+  .siteEditor .appearanceWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .siteEditor .themeCustomizerControls,
+  .siteEditor .appearanceControls {
+    max-height: none;
+    padding: 20px;
+  }
+  .siteEditor .themeCustomizerPreview,
+  .siteEditor .appearancePreview {
+    position: static;
+    margin: 12px;
+  }
+  .siteEditorStatus {
+    width: 100%;
+    order: -1;
+  }
+  .siteEditor .appearanceView-settings .appearancePreview,
+  .siteEditor .appearanceView-preview .appearanceControls {
+    display: none;
+  }
+}

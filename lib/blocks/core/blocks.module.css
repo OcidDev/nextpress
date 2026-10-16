@@ -1,0 +1,52 @@
+/* Gaya untuk blok bawaan yang tidak punya komponen padanan di tema.
+   Blok yang membungkus komponen tema memakai CSS modul komponen itu sendiri
+   (`ArticleContent.module.css`, `PostList.module.css`), supaya markup halaman dan
+   markup blok tidak dapat menyimpang. Yang ada di sini hanya yang benar-benar
+   baru: tata letak kolom, jarak, dan tipografi teks blok. */
+
+.columns {
+  display: grid;
+  gap: 20px;
+}
+.columns[data-columns='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.columns[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.columns[data-columns='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.columns[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 768px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.spacer {
+  flex: none;
+}
+.spacer[data-size='sm'] {
+  height: 16px;
+}
+.spacer[data-size='md'] {
+  height: 32px;
+}
+.spacer[data-size='lg'] {
+  height: 64px;
+}
+
+.paragraph {
+  white-space: pre-wrap;
+  margin-block: 0 16px;
+}
+.paragraph:last-child {
+  margin-block-end: 0;
+}
+
+.siteTitle {
+  margin: 0;
+}

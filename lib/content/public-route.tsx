@@ -7,12 +7,12 @@ import Article, { generateMetadata as articleMetadata } from '@/components/post/
 import Page, { generateMetadata as pageMetadata } from '@/components/post/PublicPage'
 import { getPage } from '@/lib/db/queries/posts'
 import { getSettings } from '@/lib/db/queries/settings'
-import Category, { generateMetadata as categoryMetadata } from '@/components/site/PublicCategory'
-import { SiteFrame } from '@/components/site/SiteFrame'
-import { MainContainer } from '@/components/layout/MainContainer'
-import { PostList } from '@/components/blog/PostList'
+import Category, { generateMetadata as categoryMetadata } from '@/components/theme/PublicCategory'
 import { getPosts, pageNumber } from '@/lib/db/queries/posts'
 import { publicPageMetadata } from './metadata'
+import { ThemePage } from '@/lib/themes/ThemePage'
+import { MainContainer } from '@/components/layout/MainContainer'
+import { PostList } from '@/components/blog/PostList'
 
 async function taxonomy(path: string) {
   const term = await findPublicTaxonomyRoute(path)
@@ -56,7 +56,6 @@ export async function publicRouteMetadata(path: string) {
     return pageMetadata({ params: Promise.resolve({ slug: path.slice(1) }) })
   return { title: 'Halaman tidak ditemukan', robots: { index: false } }
 }
-
 export async function publicRoute(path: string) {
   path = await requestedPath(path)
   const term = await taxonomy(path)
@@ -71,12 +70,15 @@ export async function publicRoute(path: string) {
     const basePath = `/${(await getSettings()).tagBase || 'tag'}/${slug}`
     await enforceCanonical(basePath, 'not-found')
     return (
-      <SiteFrame>
+      <ThemePage
+        query={{ kind: 'tag', termSlug: slug }}
+        context={{ archive: { result, basePath } }}
+      >
         <MainContainer>
           <h1>Tag: {slug}</h1>
           <PostList result={result} basePath={basePath} />
         </MainContainer>
-      </SiteFrame>
+      </ThemePage>
     )
   }
   const post = await findPublicPostRoute(path)

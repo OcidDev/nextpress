@@ -18,3 +18,7 @@ export function slugify(input: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/** Gabungkan path ke URL absolut situs. */
+export function absoluteUrl(path: string, base: string): string {
+  return new URL(path, base).toString()
+}

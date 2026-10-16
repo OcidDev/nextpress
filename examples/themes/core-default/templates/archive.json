@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "header"
+      }
+    },
+    {
+      "block": "core/route-content"
+    },
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "footer"
+      }
+    }
+  ]
+}

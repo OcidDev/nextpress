@@ -4,6 +4,16 @@ import type { Category } from './category'
 export type PostStatus = 'draft' | 'published' | 'scheduled'
 export type PostLayout = 'default' | 'fullpage'
 
+export interface SEO {
+  title?: string
+  description?: string
+  canonical?: string
+  ogImage?: string
+  noIndex?: boolean
+  keywords?: string[]
+  focusKeyword?: string
+}
+
 export interface TocItem {
   id: string
   text: string
@@ -53,10 +63,12 @@ export interface Post {
   updatedAt?: string
   /** /YYYY/MM/judul.html — disimpan agar peta redirect bisa dibuat kapan saja. */
   legacyPath?: string
+
+  seo?: SEO
 }
 
 /** Bentuk ringkas untuk kartu di daftar artikel. */
-export type PostSummary = Omit<Post, 'content' | 'contentHtml'>
+export type PostSummary = Omit<Post, 'content' | 'contentHtml' | 'seo'>
 
 export interface Page {
   id: string
@@ -64,6 +76,7 @@ export interface Page {
   title: string
   content: string
   contentHtml?: string
+  seo?: SEO
   updatedAt?: string
 }
 

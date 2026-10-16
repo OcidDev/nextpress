@@ -399,6 +399,11 @@ svg .d2 {
 .iconButton:active {
   transform: scale(var(--press-scale));
 }
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .headerSearch span {
   display: none;
 }

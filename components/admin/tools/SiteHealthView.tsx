@@ -94,6 +94,14 @@ export function SiteHealthView({ report }: { report: SiteHealthReport }) {
               <td style={{ padding: '0.5rem 0', fontWeight: 600 }}>Lingkungan (Environment)</td>
               <td style={{ padding: '0.5rem 0' }}>{report.systemInfo.environment}</td>
             </tr>
+            <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <td style={{ padding: '0.5rem 0', fontWeight: 600 }}>Tema Aktif</td>
+              <td style={{ padding: '0.5rem 0' }}>{report.systemInfo.activeTheme}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '0.5rem 0', fontWeight: 600 }}>Plugin Aktif</td>
+              <td style={{ padding: '0.5rem 0' }}>{report.systemInfo.activePluginsCount} plugin</td>
+            </tr>
           </tbody>
         </table>
       </div>

@@ -14,12 +14,13 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
-import type { AuthorSocial } from '@/types'
+import type { AuthorSocial, SEO } from '@/types'
 import { user } from './auth-schema'
 
 /**
- * Tabel konten utama: penulis, kategori, artikel, taksonomi artikel, komentar,
- * dan laman. Kolom memakai snake_case; field TypeScript camelCase.
+ * Barrel skema. Tabel inti, konten, plugin, dan tema diekspor ulang di bawah
+ * sehingga `drizzle-kit generate` cukup menunjuk satu berkas ini.
+ * Kolom memakai snake_case, field TypeScript camelCase.
  */
 
 /** `tsvector` belum punya tipe bawaan di Drizzle; didaftarkan manual. */
@@ -102,6 +103,8 @@ export const posts = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     /** /YYYY/MM/judul.html — dipertahankan agar peta redirect bisa dibuat nanti. */
     legacyPath: text('legacy_path'),
+
+    seo: jsonb('seo').$type<SEO>(),
 
     /**
      * Dibangun dari title + excerpt. Pengganti pencarian Blogger.
@@ -186,6 +189,7 @@ export const pages = pgTable(
     slug: varchar('slug', { length: 200 }).notNull(),
     title: text('title').notNull(),
     content: text('content').notNull().default(''),
+    seo: jsonb('seo').$type<SEO>(),
     parentId: varchar('parent_id', { length: 32 }).references((): AnyPgColumn => pages.id, {
       onDelete: 'restrict',
     }),
@@ -205,6 +209,7 @@ export type PageRow = typeof pages.$inferSelect
 export { user, session, account, verification, rateLimit } from './auth-schema'
 export { media, settings, commentLimits } from './operations-schema'
 export { adminPreferences } from './preferences-schema'
+export { plugins } from './plugin-schema'
 export { viewDaily, viewBatches } from './views-schema'
 export { options, transients, content } from './core-schema'
 export {
@@ -217,3 +222,4 @@ export {
   termMeta,
   legacyContentMap,
 } from './data-schema'
+export { themePackages } from './theme-schema'

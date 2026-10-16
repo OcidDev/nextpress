@@ -1,0 +1,36 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  font-size: var(--headerT);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.logo > span:first-child {
+  flex-shrink: 0;
+}
+.logo > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mark {
+  display: grid;
+  grid-auto-flow: column;
+  place-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--linkB);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 25px;
+  letter-spacing: -2px;
+  line-height: 1;
+  padding-block-end: 4px;
+}
+.mark span {
+  opacity: 0.65;
+}

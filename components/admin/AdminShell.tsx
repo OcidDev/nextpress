@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   PlusIcon,
   EyeIcon,
+  CircleIcon,
   HamIcon,
   CloseIcon,
   ArrowLeftIcon,
@@ -48,6 +49,16 @@ const navigation = [
     ],
   },
   { label: 'Komentar', href: '/admin/comments', icon: CommentsIcon },
+  {
+    label: 'Tampilan',
+    href: '/admin/appearance',
+    icon: EyeIcon,
+    children: [
+      { label: 'Tema', href: '/admin/appearance' },
+      { label: 'Sesuaikan', href: '/admin/appearance/customize' },
+    ],
+  },
+  { label: 'Plugin', href: '/admin/plugins', icon: CircleIcon },
   { label: 'Pengguna', href: '/admin/users', icon: ProfileIcon },
   {
     label: 'Peralatan',
@@ -105,6 +116,8 @@ export function AdminShell({
     '/admin/media': 'upload_files',
     '/admin/pages': 'edit_others_pages',
     '/admin/comments': 'moderate_comments',
+    '/admin/appearance': 'edit_theme_options',
+    '/admin/plugins': 'activate_plugins',
     '/admin/users': 'list_users',
     '/admin/settings': 'manage_options',
     '/admin/categories': 'manage_categories',
@@ -113,11 +126,13 @@ export function AdminShell({
   const permitted = (href: string) =>
     can(
       routeCaps[href] ??
-        (href.startsWith('/admin/posts/')
-          ? 'edit_posts'
-          : href.startsWith('/admin/pages/')
-            ? 'edit_others_pages'
-            : 'manage_options'),
+        (href.startsWith('/admin/appearance/')
+          ? 'edit_theme_options'
+          : href.startsWith('/admin/posts/')
+            ? 'edit_posts'
+            : href.startsWith('/admin/pages/')
+              ? 'edit_others_pages'
+              : 'manage_options'),
     )
   const allowedNavigation = navigation
     .filter((item) => permitted(item.href))

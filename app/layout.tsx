@@ -3,6 +3,8 @@ import localFont from 'next/font/local'
 import { siteConfig } from '@/data/site-config'
 import { createThemeInitScript, validTheme } from '@/lib/theme'
 import { getSettings } from '@/lib/db/queries/settings'
+import { applyFilters } from '@/lib/extensions/hooks'
+import { bootExtensions } from '@/lib/extensions/bootstrap'
 import './globals.css'
 
 const sans = localFont({
@@ -56,6 +58,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     settings.defaultMode,
     validTheme(settings.defaultTheme),
   )
+  // Kernel ekstensi (EXT-02) dimuat sebelum hook apa pun dipakai. `cache()` di
+  // dalamnya membuat ini sekali per request, dan `markBooted()` membuatnya
+  // idempoten, jadi memanggilnya dari beberapa tempat aman.
+  await bootExtensions()
+  // `body_class` (EXT-01) berlaku untuk seluruh dokumen, termasuk `/admin` dan
+  // `/preview`, karena layout ini dipakai bersama. Ekstensi yang hanya ingin
+  // menyasar halaman publik harus memeriksa sendiri kelas yang sudah ada.
+  const bodyClass = await applyFilters('body_class', '')
   return (
     <html
       lang={siteConfig.language}
@@ -68,7 +78,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>{children}</body>
+      <body className={bodyClass || undefined}>{children} </body>
     </html>
   )
 }

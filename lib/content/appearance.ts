@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { defaultSettings, settingsSchema, type SiteSettings } from './settings'
 import { safeUrl } from './validation'
+import { pluginIdSchema } from '@/lib/plugins/manifest'
 
 export const appearanceSiteSchema = settingsSchema.omit({ gaId: true, adsenseId: true })
 const itemId = z
@@ -29,12 +30,18 @@ const link = z.object({ label: z.string().trim().min(1).max(80), href }).strict(
 const common = { id: itemId, enabled: z.boolean(), title }
 const widgetCommon = { ...common, sticky: z.boolean().default(false) }
 const collection = { limit: z.number().int().min(1).max(20), layout: z.enum(['grid', 'list']) }
-export const sectionTypes = ['hero', 'latest', 'featured', 'category'] as const
+const pluginReference = {
+  pluginId: z.union([z.literal(''), pluginIdSchema]),
+  widgetId: z.union([z.literal(''), pluginIdSchema]),
+}
+
+export const sectionTypes = ['hero', 'latest', 'featured', 'category', 'plugin'] as const
 export const sectionLabels: Record<(typeof sectionTypes)[number], string> = {
   hero: 'Pembuka',
   latest: 'Artikel terbaru',
   featured: 'Artikel unggulan',
   category: 'Artikel per kategori',
+  plugin: 'Widget plugin',
 }
 export const sectionSchema = z.discriminatedUnion('type', [
   z
@@ -67,6 +74,7 @@ export const sectionSchema = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ ...common, type: z.literal('category'), categorySlug, ...collection }).strict(),
+  z.object({ ...common, type: z.literal('plugin'), ...pluginReference }).strict(),
 ])
 
 export const widgetTypes = [
@@ -80,6 +88,7 @@ export const widgetTypes = [
   'social',
   'text',
   'image',
+  'plugin',
 ] as const
 export const widgetLabels: Record<(typeof widgetTypes)[number], string> = {
   about: 'Tentang situs',
@@ -92,6 +101,7 @@ export const widgetLabels: Record<(typeof widgetTypes)[number], string> = {
   social: 'Sosial',
   text: 'Teks',
   image: 'Gambar',
+  plugin: 'Widget plugin',
 }
 export const widgetSchema = z.discriminatedUnion('type', [
   z.object({ ...widgetCommon, type: z.literal('about'), text }).strict(),
@@ -123,6 +133,7 @@ export const widgetSchema = z.discriminatedUnion('type', [
   z
     .object({ ...widgetCommon, type: z.literal('image'), image: safeUrl, alt: z.string().max(250) })
     .strict(),
+  z.object({ ...widgetCommon, type: z.literal('plugin'), ...pluginReference }).strict(),
 ])
 
 export const footerDefaults = {
@@ -291,6 +302,8 @@ export function createSection(type: Section['type'], id = newItemId('section')):
       return { ...common, type, postId: '', layout: 'grid', presentation: 'standard' }
     case 'category':
       return { ...common, type, categorySlug: '', limit: 6, layout: 'grid' }
+    case 'plugin':
+      return { ...common, type, pluginId: '', widgetId: '' }
   }
 }
 export function createWidget<T extends Widget['type']>(
@@ -326,6 +339,8 @@ export function createWidget(type: Widget['type'], id = newItemId('widget')): Wi
       return { ...common, type }
     case 'image':
       return { ...common, type, image: '', alt: '' }
+    case 'plugin':
+      return { ...common, type, pluginId: '', widgetId: '' }
   }
 }
 
@@ -365,3 +380,39 @@ export function defaultAppearance(site: SiteSettings = defaultSettings()): Appea
   }
 }
 
+export function appearancePreset(preset: Appearance['preset'], current: Appearance): Appearance {
+  const config = defaultAppearance({ ...current.site, gaId: '', adsenseId: '' })
+  config.preset = preset
+  if (preset === 'magazine') {
+    config.style.width = 'wide'
+    config.home.sections = [createSection('hero'), createSection('latest')]
+    config.sidebar.push(createWidget('recent'), createWidget('categories'))
+  } else if (preset === 'minimal') {
+    config.header.layout = 'centered'
+    config.article.sidebar = false
+    config.home.sections = [{ ...createSection('latest'), layout: 'list' }]
+    config.sidebar = []
+  } else if (preset === 'reference') {
+    config.style.design = 'reference'
+    config.header.navigationDefault = 'rail'
+    config.home.mobileColumns = 2
+    const oldFeatured = current.home.sections.find(
+      (section) => section.type === 'featured' && section.postId,
+    )
+    config.home.sections = [
+      {
+        ...createSection('featured'),
+        title: 'Disematkan',
+        presentation: 'pinned',
+        postId: oldFeatured?.type === 'featured' ? oldFeatured.postId : '',
+        enabled: Boolean(oldFeatured?.type === 'featured' && oldFeatured.postId),
+      },
+      { ...createSection('latest'), title: 'Postingan Terbaru', limit: 9, pagination: 'load-more' },
+    ]
+    config.sidebar = [createWidget('popular'), createWidget('categories')]
+    config.cards = { bookmarks: true, showViews: true, quickEdit: true }
+    config.article.bookmarks = true
+    config.footer = { ...footerDefaults, socialStyle: 'text', showWaves: true, showStats: true }
+  }
+  return config
+}

@@ -2,6 +2,7 @@
 
 import { formatPostPermalink } from '@/lib/core/permalinks'
 import { useState } from 'react'
+import { ContentSeoPanel } from './ContentSeoPanel'
 import Link from 'next/link'
 import Image from 'next/image'
 import { savePost } from '@/server/actions/content'
@@ -180,6 +181,14 @@ export function PostEditor({
             </label>
           </section>
           <HtmlEditor canUpload={options.canUpload} content={initialContent} onChange={markDirty} />
+          <ContentSeoPanel
+            provider={options.contentSeo}
+            initial={post?.seo}
+            title={fields.title}
+            description={fields.excerpt}
+            canUpload={options.canUpload}
+            onChange={markDirty}
+          />
         </div>
         <aside className="adminEditorAside" aria-label="Pengaturan artikel">
           <section className="adminEditorPanel">

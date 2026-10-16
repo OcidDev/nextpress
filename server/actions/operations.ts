@@ -62,6 +62,19 @@ export async function saveSettings(_: ActionState, data: FormData): Promise<Acti
   revalidatePath('/', 'layout')
   return { success: 'Pengaturan tersimpan.' }
 }
+export async function deleteMedia(_: ActionState, data: FormData): Promise<ActionState> {
+  await requireCapability('upload_files')
+  try {
+    await deleteMediaData(String(data.get('id')))
+  } catch {
+    return {
+      error:
+        'Media gagal dihapus. Pastikan media tidak digunakan di artikel, halaman, atau logo situs.',
+    }
+  }
+  revalidatePath('/admin/media')
+  redirect('/admin/media')
+}
 export async function updateMedia(_: ActionState, data: FormData): Promise<ActionState> {
   await requireCapability('upload_files')
   try {

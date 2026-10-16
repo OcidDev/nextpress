@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Appearance, AppearanceSite } from '@/lib/content/appearance'
 import { DesktopNavigation } from './DesktopNavigation'
-import { Announcement } from '@/components/site/Announcement'
+import { Announcement } from '@/components/theme/Announcement'
 import styles from './MainContainer.module.css'
 
 export function MainContainer({

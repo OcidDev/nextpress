@@ -1,0 +1,61 @@
+.button {
+  position: fixed;
+  inset-inline-end: 20px;
+  inset-block-end: 20px;
+  z-index: 9;
+  width: 45px;
+  height: 45px;
+  border: 1px solid var(--contentL);
+  border-radius: 50%;
+  background: var(--fotB);
+  color: var(--fotT);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity var(--motion-fast, 120ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--motion-fast, 120ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--motion-base, 180ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.button[hidden] {
+  display: none;
+}
+.button > svg:not(.progress) {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+}
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    opacity: 0.95;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  }
+}
+.button:active {
+  transform: scale(var(--press-scale, 0.98));
+}
+.button:focus-visible {
+  outline: 2px solid var(--linkC);
+  outline-offset: 4px;
+}
+.progress {
+  position: absolute;
+  inset: -1px;
+  width: 45px;
+  height: 45px;
+  fill: none;
+  stroke: var(--linkC);
+  stroke-width: 2;
+  rotate: -90deg;
+  pointer-events: none;
+}
+.progress circle {
+  stroke-dasharray: 100;
+}
+@media (max-width: 896px) {
+  .button {
+    inset-block-end: calc(var(--mobile-nav-clearance, 75px) + 20px + env(safe-area-inset-bottom));
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    { "block": "core/template-part", "props": { "slug": "header" } },
+    {
+      "block": "core/group",
+      "props": { "tagName": "main", "layout": "constrained" },
+      "children": [
+        { "block": "core/heading", "props": { "level": 1, "text": "Arsip" } },
+        { "block": "core/post-list" },
+        { "block": "core/pagination" }
+      ]
+    },
+    { "block": "core/template-part", "props": { "slug": "footer" } }
+  ]
+}

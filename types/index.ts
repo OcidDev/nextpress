@@ -10,10 +10,12 @@ export type {
   PostLayout,
   PostStatus,
   PostSummary,
+  SEO,
   TocItem,
 } from './post'
 export type {
   FooterColumn,
+  MobileNavItem,
   NavChild,
   NavItem,
   SocialLink,

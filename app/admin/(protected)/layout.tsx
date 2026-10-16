@@ -3,8 +3,10 @@ import { AdminShell } from '@/components/admin/AdminShell'
 import { getAdminPreferences, getAdminPendingCount } from '@/lib/db/queries/dashboard'
 import { getSettings } from '@/lib/db/queries/settings'
 import packageInfo from '@/package.json'
+import { bootExtensions } from '@/lib/extensions/bootstrap'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  await bootExtensions()
   const session = await requireCmsUser()
   const [preferences, pending, settings] = await Promise.all([
     getAdminPreferences(),

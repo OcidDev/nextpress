@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/group",
+      "props": { "tagName": "header" },
+      "children": [
+        { "block": "core/site-logo" },
+        { "block": "core/navigation" },
+        { "block": "core/search" },
+        { "block": "core/theme-toggle" }
+      ]
+    }
+  ]
+}

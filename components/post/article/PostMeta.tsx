@@ -32,7 +32,7 @@ export async function PostMeta({
   showDate = true,
 }: {
   post: Post
-  /** URL absolut untuk tombol berbagi. */
+  /** URL absolut untuk tombol berbagi; lihat `shareUrlFor` di `lib/blocks/context.ts`. */
   shareUrl: string
   appearance: Appearance
   preview?: boolean

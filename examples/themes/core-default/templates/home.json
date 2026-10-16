@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "header"
+      }
+    },
+    {
+      "block": "core/content-layout",
+      "props": {
+        "layout": "plain",
+        "sidebar": false
+      },
+      "children": [
+        {
+          "block": "core/site-title",
+          "props": {
+            "level": 1
+          }
+        },
+        {
+          "block": "core/site-description"
+        },
+        {
+          "block": "core/widget-area",
+          "props": {
+            "slot": "home-top"
+          }
+        },
+        {
+          "block": "core/post-list",
+          "props": {
+            "layout": "grid"
+          }
+        },
+        {
+          "block": "core/pagination"
+        },
+        {
+          "block": "core/widget-area",
+          "props": {
+            "slot": "home-bottom"
+          }
+        }
+      ]
+    },
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "footer"
+      }
+    }
+  ]
+}

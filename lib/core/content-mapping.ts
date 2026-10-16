@@ -76,6 +76,37 @@ export async function legacySourceHash(
   return sha({ row, account })
 }
 
+/** Counters remain legacy-owned; allow only that delta and preserve their current values. */
+export async function legacySourceMatches(
+  tx: CoreTransaction,
+  mapping: Pick<ContentMapping, 'source' | 'sourceId' | 'contentId' | 'sourceHash'>,
+) {
+  if (mapping.sourceHash === (await legacySourceHash(tx, mapping.source, mapping.sourceId)))
+    return true
+  if (mapping.source !== 'post') return false
+  const row = await legacySourceRow(tx, 'post', mapping.sourceId)
+  if (!row) return false
+  const meta = (
+    await tx.execute(sql`select meta_value from cms_content_meta
+    where object_id=${mapping.contentId} and meta_key in ('_legacy_counters','_legacy_fields')
+    order by case when meta_key='_legacy_counters' then 0 else 1 end,id limit 1`)
+  ).rows
+  if (!meta.length) return false
+  const baseline = meta[0]!.meta_value as Record<string, unknown>
+  if (typeof baseline.view_count !== 'number' || typeof baseline.comment_count !== 'number')
+    return false
+  const account =
+    (await tx.execute(sql`select user_id from authors where id=${row.author_id}`)).rows[0]
+      ?.user_id ?? null
+  return (
+    mapping.sourceHash ===
+    sha({
+      row: { ...row, view_count: baseline.view_count, comment_count: baseline.comment_count },
+      account,
+    })
+  )
+}
+
 /** Never infer ownership from an equal ID or a slug. Unmapped rows are never overwritten. */
 export async function projectionTarget(
   tx: CoreTransaction,

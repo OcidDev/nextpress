@@ -25,6 +25,12 @@ export const primitiveCapabilities = [
   'manage_options',
   'list_users',
   'edit_users',
+  'install_plugins',
+  'activate_plugins',
+  'delete_plugins',
+  'install_themes',
+  'switch_themes',
+  'edit_theme_options',
 ] as const
 export type PrimitiveCapability = (typeof primitiveCapabilities)[number]
 export const roleNameSchema = z
@@ -61,7 +67,18 @@ export function canonicalRole(role: string) {
 }
 export function initialRoles(): z.infer<typeof roleDefinitionsSchema> {
   const editor = primitiveCapabilities.filter(
-    (cap) => !['manage_options', 'list_users', 'edit_users'].includes(cap),
+    (cap) =>
+      ![
+        'manage_options',
+        'list_users',
+        'edit_users',
+        'install_plugins',
+        'activate_plugins',
+        'delete_plugins',
+        'install_themes',
+        'switch_themes',
+        'edit_theme_options',
+      ].includes(cap),
   )
   return {
     administrator: { label: 'Administrator', capabilities: [...primitiveCapabilities] },
@@ -170,7 +187,19 @@ export function currentUserCan(
   const family = capabilityType === 'page' ? 'pages' : capabilityType === 'post' ? 'posts' : null
   if (!family) {
     if (object.type === 'user_request') return !!actor && roles.has(actor.role, 'manage_options')
-    return false
+    const themeTypes = [
+      'wp_navigation',
+      'wp_template',
+      'wp_template_part',
+      'wp_global_styles',
+      'nav_menu_item',
+      'wp_block',
+    ]
+    return (
+      !!actor &&
+      (themeTypes.includes(object.type) || capabilityType === 'theme') &&
+      roles.has(actor.role, 'edit_theme_options')
+    )
   }
   const published = object.statusPublic ?? ['publish', 'published'].includes(object.status)
   const publiclyReadable =

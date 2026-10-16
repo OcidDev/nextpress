@@ -91,14 +91,21 @@ export async function deleteMediaData(id: string) {
       .select({ id: posts.id })
       .from(posts)
       .where(
-        or(eq(posts.featuredImage, path), sql`strpos(${posts.content}, ${path}) > 0`),
+        or(
+          eq(posts.featuredImage, path),
+          sql`strpos(${posts.content}, ${path}) > 0`,
+          sql`strpos(${posts.seo}::text, ${path}) > 0`,
+        ),
       )
       .limit(1)
     const usedPages = await tx
       .select({ id: pages.id })
       .from(pages)
       .where(
-        sql`strpos(${pages.content}, ${path}) > 0`,
+        or(
+          sql`strpos(${pages.content}, ${path}) > 0`,
+          sql`strpos(${pages.seo}::text, ${path}) > 0`,
+        ),
       )
       .limit(1)
     const usedSettings = await tx

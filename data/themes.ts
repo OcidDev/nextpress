@@ -9,8 +9,8 @@ export interface ThemeOption {
 }
 
 /**
- * 11 palet warna situs. Palet lengkap tiap tema ada di app/globals.css; di sini
- * hanya metadata yang dibutuhkan UI pemilih tema.
+ * 11 tema warna. Palet lengkap tiap tema ada di app/globals.css; di sini hanya
+ * metadata yang dibutuhkan UI pemilih tema.
  */
 export const themeOptions: ThemeOption[] = [
   { id: '0', label: 'Default', swatch: '#482dff' },

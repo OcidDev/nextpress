@@ -50,7 +50,7 @@ export const transients = pgTable(
   ],
 )
 
-/** Proyeksi kanonik konten; tabel di `schema.ts` tetap sumber tulis sampai proyeksi penuh. */
+/** Additive and empty in S1; posts/pages stay authoritative until WP-05. */
 export const content = pgTable(
   'cms_content',
   {
@@ -61,7 +61,7 @@ export const content = pgTable(
       onDelete: 'restrict',
     }),
     authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
-    /** Menyimpan atribusi lama saat akun autentikasi belum ada. */
+    /** Preserves legacy attribution even when no auth account exists. WP-05 maps it. */
     legacyAuthorId: varchar('legacy_author_id', { length: 32 }),
     slug: varchar('slug', { length: 200 }).notNull().default(''),
     title: text('title').notNull().default(''),

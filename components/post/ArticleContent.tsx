@@ -1,6 +1,9 @@
+import { effectiveContentSeo } from '@/lib/plugins/content-seo-server'
 import Link from 'next/link'
 import type { Appearance } from '@/lib/content/appearance'
 import { buildArticleContent } from '@/lib/content/article'
+import { applyFilters } from '@/lib/extensions/hooks'
+import { bootExtensions } from '@/lib/extensions/bootstrap'
 import { getAppearance } from '@/lib/db/queries/appearance'
 import { getArticleNeighbors } from '@/lib/db/queries/related-posts'
 import { getViewStats } from '@/lib/db/queries/views'
@@ -8,7 +11,8 @@ import { siteConfig } from '@/data/site-config'
 import type { Post } from '@/types'
 import { MainContainer } from '@/components/layout/MainContainer'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { Widgets } from '@/components/site/Widgets'
+import { Widgets } from '@/components/theme/Widgets'
+import { PluginSlot } from '@/components/theme/PluginSlot'
 import { BookmarkButton } from '@/components/blog/BookmarkButton'
 import { ViewTracker } from '@/components/analytics/ViewTracker'
 import { EyeIcon } from '@/components/ui/icons/EyeIcon'
@@ -34,7 +38,11 @@ export async function ArticleContent({
 }) {
   const config = appearance ?? (await getAppearance())
   const { html, headings } = buildArticleContent(post.content)
-  const title = post.title
+  await bootExtensions()
+  // `the_title` (EXT-01) mengubah judul yang tampil di halaman, bukan `post.title`
+  // di seluruh komponen: metadata, atribut `alt`, dan tautan berbagi tetap memakai
+  // judul aslinya.
+  const title = await applyFilters('the_title', post.title)
   const neighbors = preview
     ? { related: [], previous: null, next: null }
     : await getArticleNeighbors(post)
@@ -42,7 +50,9 @@ export async function ArticleContent({
     config.site.viewsEnabled && config.cards.showViews && !preview
       ? await getViewStats(post.id)
       : null
-  const shareUrl = new URL(post.permalink || `/blog/${post.slug}`, siteConfig.url).href
+  const seo = await effectiveContentSeo(post.seo)
+  const shareUrl =
+    seo.canonical || new URL(post.permalink || `/blog/${post.slug}`, siteConfig.url).href
   return (
     <MainContainer
       site={config.site}
@@ -50,7 +60,12 @@ export async function ArticleContent({
       sidebar={
         config.article.sidebar && config.sidebar.some((widget) => widget.enabled) ? (
           <Sidebar>
-            <Widgets items={config.sidebar} site={config.site} currentPostId={post.id} />
+            <Widgets
+              items={config.sidebar}
+              site={config.site}
+              preview={preview}
+              currentPostId={post.id}
+            />
           </Sidebar>
         ) : undefined
       }
@@ -106,6 +121,7 @@ export async function ArticleContent({
           )}
           <PostAuthorBox post={post} />
         </article>
+        <PluginSlot slot="article-after" preview={preview} />
         {(neighbors.previous || neighbors.next) && (
           <nav aria-label="Artikel sebelumnya dan berikutnya" className={styles.adjacent}>
             {neighbors.previous && (

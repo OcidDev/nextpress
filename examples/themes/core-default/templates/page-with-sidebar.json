@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "header"
+      }
+    },
+    {
+      "block": "core/content-layout",
+      "props": {
+        "layout": "plain"
+      },
+      "children": [
+        {
+          "block": "core/group",
+          "props": {
+            "tagName": "div",
+            "className": "cmsPageSidebarLayout"
+          },
+          "children": [
+            {
+              "block": "core/group",
+              "props": {
+                "tagName": "article",
+                "className": "cmsPageArticle"
+              },
+              "children": [
+                {
+                  "block": "core/post-title"
+                },
+                {
+                  "block": "core/post-content"
+                }
+              ]
+            },
+            {
+              "block": "core/group",
+              "props": {
+                "tagName": "aside",
+                "className": "cmsPageSidebar"
+              },
+              "children": [
+                {
+                  "block": "core/heading",
+                  "props": {
+                    "level": 2,
+                    "text": "Tentang situs"
+                  }
+                },
+                {
+                  "block": "core/site-description"
+                },
+                {
+                  "block": "core/search",
+                  "props": {
+                    "label": "Cari di situs"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "footer"
+      }
+    }
+  ]
+}

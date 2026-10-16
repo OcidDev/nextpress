@@ -2,8 +2,8 @@ export type CommentStatus = 'pending' | 'approved' | 'spam'
 
 /**
  * Bentuk komentar yang aman dikirim ke client.
- * `authorEmail` sengaja tidak ada di tipe ini agar alamat surel komentator
- * tidak pernah ikut terkirim ke client.
+ * `authorEmail` sengaja tidak ada di tipe ini agar email penulis tidak ikut
+ * terkirim ke client.
  */
 export interface PublicComment {
   id: string

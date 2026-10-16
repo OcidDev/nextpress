@@ -1,6 +1,10 @@
 import { MODE_STORAGE_KEY, THEME_STORAGE_KEY, themeIds } from '@/data/themes'
 import type { ThemeId, ThemeMode } from '@/types'
 
+export function validMode(value: unknown): ThemeMode {
+  return value === 'light' || value === 'dark' ? value : 'system'
+}
+
 export function validTheme(value: unknown): ThemeId {
   return themeIds.includes(value as ThemeId) ? (value as ThemeId) : '0'
 }

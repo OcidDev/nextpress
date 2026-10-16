@@ -1,0 +1,78 @@
+@font-face { font-family: theme-core-default-cardo; src: url(assets/cardo.woff2) format('woff2'); font-display: swap; font-weight: 400; }
+@font-face { font-family: theme-core-default-inter; src: url(assets/inter.woff2) format('woff2'); font-display: swap; font-weight: 100 900; }
+:scope {
+  --font-sans: var(--theme--custom--body-font, theme-core-default-inter), Arial, sans-serif;
+  --font-mono: monospace;
+  --themeC: var(--theme--custom--text, #111); --headC: var(--theme--custom--text, #111); --bodyC: var(--theme--custom--text, #111); --bodyCa: var(--theme--custom--muted, #666);
+  --bodyB: var(--theme--custom--background, #f9f9f9); --linkC: var(--theme--custom--text, #111); --linkB: var(--theme--custom--text, #111); --contentB: var(--theme--custom--background, #f9f9f9);
+  --contentL: var(--theme--custom--border, #dedede); --iconC: var(--theme--custom--text, #111); --iconCa: var(--theme--custom--text, #111); --iconCs: var(--theme--custom--muted, #555);
+  --fontH: var(--theme--custom--heading-font, theme-core-default-cardo), Georgia, serif;
+  --fontB: var(--theme--custom--body-font, theme-core-default-inter), Arial, sans-serif;
+  --fontBa: var(--theme--custom--body-font, theme-core-default-inter), Arial, sans-serif;
+  --buttonR: 6px; --postT: 56px; --postTm: 36px; --pageW: var(--theme--custom--reading-width, 800px);
+  color-scheme: light;
+  --head-font: var(--theme--custom--heading-font, theme-core-default-cardo), Georgia, serif;
+  --body-bg: var(--theme--custom--background, #f9f9f9); --body-color: var(--theme--custom--text, #111); --link-color: var(--theme--custom--text, #111);
+  --body-font: var(--theme--custom--body-font, theme-core-default-inter), Arial, sans-serif;
+  --content-bg: var(--theme--custom--background, #f9f9f9); --border-color: var(--theme--custom--border, #d7d7d7); --theme-color: var(--theme--custom--text, #111);
+  background: var(--theme--custom--background, #f9f9f9); color: var(--theme--custom--text, #111); font-family: var(--font-sans); font-size: var(--theme--custom--font-size, 16px);
+  overflow-wrap: anywhere; line-height: 1.65; min-height: 100vh; padding: 0 clamp(20px, 5vw, 80px);
+}
+:scope a { color: var(--theme--custom--accent, #111); }
+:scope h1, :scope h2, :scope h3, :scope h4 { font-family: var(--head-font); font-weight: 400; letter-spacing: -.035em; line-height: 1.15; color: var(--theme--custom--text, #111); }
+:scope h1 { font-size: clamp(38px, 5vw, 64px); margin: 0 0 24px; }
+:scope h2 { font-size: clamp(26px, 3vw, 40px); }
+:scope .cmsSimpleHeader { max-width: var(--theme--custom--content-width, 1280px); margin: auto; padding: 32px 0; display: flex; align-items: center; gap: 32px; border-bottom: 1px solid var(--theme--custom--border, #dedede); }
+:scope .cmsSiteName { min-width: 0; font-weight: 600; font-size: 20px; text-decoration: none; letter-spacing: -.035em; }
+:scope .cmsInlineNavigation { min-width: 0; display: flex; flex: 1; justify-content: flex-end; flex-wrap: wrap; gap: 24px; font-size: 14px; }
+:scope .cmsHeaderControls { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+:scope .cmsHeaderControls button { color: var(--theme--custom--text, #111); background: transparent; }
+:scope .cmsHeaderControls button:last-child { display: none; }
+:scope .cmsPlainContent { max-width: var(--theme--custom--content-width, 1280px); margin: auto; padding: clamp(48px, 7vw, 112px) 0; }
+:scope .cmsPlainContent > h1 { text-align: center; max-width: 850px; margin: 0 auto 24px; }
+:scope .cmsSiteDescription { text-align: center; max-width: 650px; margin: 0 auto 80px; color: var(--theme--custom--muted, #555); }
+:scope .cmsContentShell { display: block; max-width: var(--theme--custom--content-width, 1280px); padding: 0; margin: auto; min-height: 50vh; }
+:scope #desktop-navigation { display: none; }
+:scope .cmsContentShell > aside { display: none; }
+:scope .cmsContentShell > nav { display: none; }
+:scope .cmsContentBody { width: 100%; padding: 64px 0; margin: 0; }
+:scope .cmsContentColumns { display: block; }
+:scope .cmsContentColumns > aside { display: none; }
+:scope .cmsContentMain { width: 100%; max-width: 100%; margin: 0; padding: 0; }
+:scope .cmsSimpleFooter { max-width: var(--theme--custom--content-width, 1280px); margin: auto; padding: 64px 0 32px; border-top: 1px solid var(--theme--custom--border, #dedede); }
+:scope .cmsSimpleFooter p { color: var(--theme--custom--muted, #555); max-width: 480px; }
+:scope .cmsSimpleFooter nav { display: flex; flex-wrap: wrap; gap: 24px; padding: 24px 0 48px; }
+:scope .panel { background: transparent; color: var(--theme--custom--text, #111); border: 0; box-shadow: none; border-radius: 0; }
+:scope .button { background: var(--theme--custom--accent, #111); color: var(--theme--custom--button-text, #fff); border-radius: 6px; }
+:scope .cmsPostCard { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+:scope .cmsPostCard h2 { font-size: 28px; }
+:scope .cmsPostCard img { border-radius: 0; }
+@media (max-width: 760px) {
+ :scope .cmsSimpleHeader { padding: 24px 0; gap: 12px; justify-content: space-between; }
+ :scope .cmsInlineNavigation { min-width: 0; display: none; }
+ :scope .cmsHeaderControls button:last-child { display: inline-flex; }
+ :scope .cmsSiteDescription { margin-bottom: 48px; }
+ :scope .cmsContentBody { padding: 40px 0; }
+}
+
+:scope .cmsPostCard::before { display: none; }
+:scope .cmsPostCard { padding: 0; }
+:scope .cmsPostCard:hover { box-shadow: none; transform: none; }
+:scope .cmsPostCard > div:first-child { border-radius: 0; }
+:scope .cmsPostCard h2 { font-family: var(--fontH); font-weight: 400; line-height: 1.2; }
+
+:scope { --postF: var(--theme--custom--font-size, 16px); --postFm: var(--theme--custom--font-size, 16px); --linkC: var(--theme--custom--accent, #111); --link-color: var(--theme--custom--accent, #111); }
+:scope .cmsPostGrid { grid-template-columns: repeat(var(--theme--custom--columns, 3), minmax(0, 1fr)); }
+@media (max-width: 600px) { :scope .cmsPostGrid { grid-template-columns: minmax(0, 1fr); } }
+
+:scope .cmsPageArticle { max-width: var(--theme--custom--reading-width, 800px); margin-inline: auto; min-width: 0; }
+:scope .cmsPageArticle h1 { margin-bottom: 32px; }
+:scope[data-theme-template="page-wide"] .cmsPageArticle { max-width: 100%; }
+:scope .cmsPageSidebarLayout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(200px, 1fr); gap: 48px; }
+:scope .cmsPageSidebar { border-left: 1px solid var(--theme--custom--border, #dedede); padding-left: 32px; }
+:scope .cmsPageSidebar .cmsSiteDescription { text-align: left; margin: 0 0 32px; }
+:scope .cmsPageSidebar h2 { font-size: 24px; }
+@media (max-width: 760px) {
+ :scope .cmsPageSidebarLayout { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+ :scope .cmsPageSidebar { border-left: 0; border-top: 1px solid var(--theme--custom--border, #dedede); padding: 32px 0 0; }
+}

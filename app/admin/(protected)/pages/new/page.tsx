@@ -1,3 +1,4 @@
+import { getContentSeoProvider } from '@/lib/plugins/content-seo-server'
 import { userHasCapability } from '@/lib/core/roles'
 import { requireCapability } from '@/lib/admin'
 import { PageEditor } from '@/components/admin/PageEditor'
@@ -8,6 +9,7 @@ export default async function NewPage() {
     <>
       <h1>Buat halaman</h1>
       <PageEditor
+        contentSeo={await getContentSeoProvider()}
         canUpload={userHasCapability(session.user, 'upload_files')}
         attributes={await getPageAttributeChoices()}
       />

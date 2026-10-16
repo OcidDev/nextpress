@@ -18,7 +18,9 @@
     "db:backup": "node scripts/backup-db.mjs",
     "db:restore": "node scripts/restore-db.mjs",
     "admin:create": "tsx scripts/create-admin.ts",
-    "admin:reset": "tsx scripts/reset-admin-password.ts"
+    "admin:reset": "tsx scripts/reset-admin-password.ts",
+    "plugin:pack": "node scripts/package-plugin.mjs",
+    "theme:pack": "tsx scripts/package-theme.ts"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.4",
@@ -30,13 +32,17 @@
     "@upstash/redis": "^1.35.1",
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
+    "fflate": "^0.8.3",
     "next": "^15.5.4",
     "pg": "^8.23.1",
+    "postcss": "^8.5.29",
+    "postcss-selector-parser": "^7.1.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "sanitize-html": "^2.18.0",
     "server-only": "^0.0.1",
     "sharp": "^0.35.5",
+    "yauzl": "^3.4.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {
@@ -46,6 +52,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/sanitize-html": "^2.16.2",
+    "@types/yauzl": "^3.4.0",
     "drizzle-kit": "^0.31.5",
     "eslint": "^9.39.5",
     "eslint-config-next": "15.5.27",

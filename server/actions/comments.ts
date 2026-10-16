@@ -4,6 +4,8 @@ import { requireCapability } from '@/lib/admin'
 import { submitCommentData, moderateCommentData } from '@/lib/db/queries/comments'
 import { revalidatePath } from 'next/cache'
 import type { ActionState } from '@/lib/content/validation'
+import { doAction } from '@/lib/extensions/hooks'
+import { bootExtensions } from '@/lib/extensions/bootstrap'
 export async function submitComment(_: ActionState, data: FormData): Promise<ActionState> {
   try {
     await submitCommentData(data)
@@ -26,7 +28,10 @@ export async function moderateComment(_: ActionState, data: FormData): Promise<A
   const id = String(data.get('id'))
   const moderated = await moderateCommentData(id, status.data)
   revalidatePath('/', 'layout')
-  // `moderated` tetap dipakai untuk memastikan komentar masih ada.
-  void moderated
+  await bootExtensions()
+  // `comment_approved` (EXT-01) hanya untuk komentar yang benar-benar lolos
+  // moderasi, dan hanya bila komentarnya masih ada.
+  if (status.data === 'approved' && moderated)
+    await doAction('comment_approved', { id, postId: moderated.postId })
   return { success: 'Status komentar diperbarui.' }
 }

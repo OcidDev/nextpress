@@ -1,13 +1,11 @@
+import { ThemePage } from '@/lib/themes/ThemePage'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPosts, pageNumber } from '@/lib/db/queries/posts'
 import { MainContainer } from '@/components/layout/MainContainer'
 import { PostList } from '@/components/blog/PostList'
-import { SiteFrame } from '@/components/site/SiteFrame'
 import { publicPageMetadata } from '@/lib/content/metadata'
-
 export const dynamic = 'force-dynamic'
-
 export async function generateMetadata({
   params,
   searchParams,
@@ -25,7 +23,6 @@ export async function generateMetadata({
     page: pageNumber((await searchParams).page),
   })
 }
-
 export default async function ArchiveYear({
   params,
   searchParams,
@@ -37,11 +34,14 @@ export default async function ArchiveYear({
   if (!Number.isInteger(year) || year < 1900 || year > 9999) notFound()
   const result = await getPosts({ year, page: pageNumber((await searchParams).page) })
   return (
-    <SiteFrame>
+    <ThemePage
+      query={{ kind: 'date' }}
+      context={{ archive: { result, basePath: `/archive/${year}` } }}
+    >
       <MainContainer>
         <h1>Arsip {year}</h1>
         <PostList result={result} basePath={`/archive/${year}`} />
       </MainContainer>
-    </SiteFrame>
+    </ThemePage>
   )
 }

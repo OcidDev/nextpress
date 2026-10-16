@@ -3,16 +3,22 @@ import { getSettings } from './settings'
 import { formatPostPermalink } from '@/lib/core/permalinks'
 import { permalinkConfig } from '@/lib/content/permalink-server'
 import 'server-only'
-import { and, count, desc, eq, getTableColumns, inArray, lte, sql } from 'drizzle-orm'
+import { and, count, desc, eq, getTableColumns, inArray, lte, notInArray, sql } from 'drizzle-orm'
 import { getDb, hasDatabase } from '@/lib/db'
 import { authors, categories, pages, postCategories, posts, postTags } from '@/lib/db/schema'
 import type { Post, PostSummary, Paginated } from '@/types'
+import type { Appearance } from '@/lib/content/appearance'
+import { homeFeedKey } from '@/components/blog/feed-key'
 
 type ReadContext = { db: Pick<ReturnType<typeof getDb>, 'select'>; now: Date }
 const visible = (now = new Date()) =>
   and(eq(posts.status, 'published'), lte(posts.publishedAt, now))
-// Summary queries never transfer the article body from PostgreSQL.
-const summarySelection = { ...getTableColumns(posts), content: sql<string>`''` }
+// Summary queries never transfer the article body or SEO document from PostgreSQL.
+const summarySelection = {
+  ...getTableColumns(posts),
+  content: sql<string>`''`,
+  seo: sql<(typeof posts.$inferSelect)['seo']>`null`,
+}
 // Public category cards do not use hierarchy or administrative metadata. Keep
 // these reads compatible while an additive category migration is being rolled out.
 const publicCategorySelection = {
@@ -22,9 +28,10 @@ const publicCategorySelection = {
   description: categories.description,
 }
 function summaries(rows: Post[]): PostSummary[] {
-  return rows.map(({ content, contentHtml, ...summary }) => {
+  return rows.map(({ content, contentHtml, seo, ...summary }) => {
     void content
     void contentHtml
+    void seo
     return summary
   })
 }
@@ -74,6 +81,7 @@ async function enrich(rows: (typeof posts.$inferSelect)[], context?: ReadContext
       updatedLabel: p.updatedAt ? formatSiteDate(p.updatedAt, settings) : undefined,
       updatedAt: p.updatedAt?.toISOString(),
       legacyPath: p.legacyPath ?? undefined,
+      seo: p.seo ?? undefined,
       author: {
         id: writer.id,
         slug: writer.slug,
@@ -106,6 +114,7 @@ export async function getPosts(
     query,
     tag,
     year,
+    excludeIds = [],
   }: {
     page?: number
     perPage?: number
@@ -114,6 +123,7 @@ export async function getPosts(
     tag?: string
     query?: string
     year?: number
+    excludeIds?: string[]
   } = {},
   context?: ReadContext,
 ): Promise<Paginated<PostSummary>> {
@@ -123,6 +133,8 @@ export async function getPosts(
   if (!hasDatabase()) return { items: [], page, perPage, total: 0, totalPages: 0 }
   const db = context?.db ?? getDb()
   const conditions = [visible(context?.now)]
+  const excluded = [...new Set(excludeIds)].filter((id) => /^[a-f0-9]{32}$/.test(id)).slice(0, 20)
+  if (excluded.length) conditions.push(notInArray(posts.id, excluded))
   if (categorySlug)
     conditions.push(
       inArray(
@@ -187,6 +199,67 @@ export async function getPublicPostSummariesByIds(
   return validIds.flatMap((id) => {
     const item = items.find((post) => post.id === id)
     return item ? [item] : []
+  })
+}
+export async function getHomePostCollection(appearance: Appearance, context?: ReadContext) {
+  const active =
+    appearance.home.mode === 'posts'
+      ? appearance.home.sections.filter((section) => section.enabled)
+      : []
+  const latest = active.find((section) => section.type === 'latest')
+  const selected = active.flatMap((section) =>
+    section.type === 'featured' ? [section.postId] : [],
+  )
+  const featured = await getPublicPostSummariesByIds(selected, context)
+  const pinnedIds = new Set(
+    active.flatMap((section) =>
+      section.type === 'featured' && section.presentation === 'pinned' ? [section.postId] : [],
+    ),
+  )
+  const excludeIds = featured.filter((post) => pinnedIds.has(post.id)).map((post) => post.id)
+  let fingerprint = 'empty'
+  if (latest && hasDatabase()) {
+    const rows = await (context?.db ?? getDb())
+      .select({
+        fingerprint: sql<string>`md5(coalesce(string_agg(
+          concat(${posts.id}, ':', extract(epoch from ${posts.publishedAt})::text, ':',
+            coalesce(extract(epoch from ${posts.updatedAt})::text, '')),
+          ',' order by ${posts.id}), ''))`,
+      })
+      .from(posts)
+      .where(
+        and(
+          visible(context?.now),
+          excludeIds.length ? notInArray(posts.id, excludeIds) : undefined,
+        ),
+      )
+    fingerprint = rows[0]!.fingerprint
+  }
+  return {
+    latest,
+    featured,
+    excludeIds,
+    key: latest ? homeFeedKey(latest.id, latest.limit, excludeIds, fingerprint) : '',
+  }
+}
+export async function getHomePostsPage(appearance: Appearance, page: number, expectedKey = '') {
+  async function read(context?: ReadContext) {
+    const collection = await getHomePostCollection(appearance, context)
+    const changed = Boolean(expectedKey && expectedKey !== collection.key)
+    const result =
+      collection.latest && !changed
+        ? await getPosts(
+            { page, perPage: collection.latest.limit, excludeIds: collection.excludeIds },
+            context,
+          )
+        : null
+    return { collection, result, changed }
+  }
+  if (!hasDatabase()) return read()
+  // Key, rows and total share one snapshot, even when a publication changes between queries.
+  return getDb().transaction((db) => read({ db, now: new Date() }), {
+    isolationLevel: 'repeatable read',
+    accessMode: 'read only',
   })
 }
 export async function getPostBySlug(slug: string) {

@@ -212,8 +212,9 @@ export type DefaultCategoryState = {
 
 /**
  * Menyelesaikan option `defaultCategory` menjadi identitas kategori nyata.
- * Menerima ID maupun slug agar nilai lama tetap bekerja; fallback ke kategori
- * baku hanya saat option/term rusak dan selalu menghasilkan notice.
+ * Menerima ID (kontrak baru) dan slug (nilai prototipe) agar upgrade tidak
+ * memutus option; fallback ke kategori baku hanya saat option/term rusak dan
+ * selalu menghasilkan notice.
  */
 export async function resolveDefaultCategory(
   stored: string,

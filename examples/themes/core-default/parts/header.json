@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/site-header",
+      "props": {
+        "layout": "compact"
+      }
+    }
+  ]
+}

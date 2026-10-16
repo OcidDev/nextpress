@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "customTemplates": [
+    {
+      "name": "page-no-title",
+      "title": "Laman tanpa judul",
+      "postTypes": [
+        "page"
+      ]
+    },
+    {
+      "name": "page-with-sidebar",
+      "title": "Laman dengan bilah sisi",
+      "postTypes": [
+        "page"
+      ]
+    },
+    {
+      "name": "page-wide",
+      "title": "Laman lebar",
+      "postTypes": [
+        "page"
+      ]
+    }
+  ]
+}

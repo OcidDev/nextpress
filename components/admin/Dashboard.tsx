@@ -127,14 +127,20 @@ export function Dashboard({
     {
       complete: data.setup.hasSiteIdentity,
       title: 'Lengkapi identitas situs',
-      description: 'Atur nama, slogan, dan logo situs.',
-      href: '/admin/settings/general',
+      description: 'Atur nama, deskripsi, dan logo blog.',
+      href: '/admin/appearance',
     },
     {
       complete: data.setup.hasPost,
       title: 'Tulis artikel pertama',
       description: 'Mulai dari draft, lalu terbitkan saat siap.',
       href: '/admin/posts/new',
+    },
+    {
+      complete: data.setup.hasNavigation,
+      title: 'Susun menu navigasi',
+      description: 'Bantu pembaca menemukan isi situs.',
+      href: '/admin/appearance',
     },
   ]
 
@@ -152,8 +158,8 @@ export function Dashboard({
                   <PlusIcon aria-hidden="true" /> Tulis artikel
                 </Link>
                 {isAdmin && (
-                  <Link className="button secondary" href="/admin/settings/general">
-                    <SettingsIcon aria-hidden="true" /> Pengaturan situs
+                  <Link className="button secondary" href="/admin/appearance">
+                    <SettingsIcon aria-hidden="true" /> Atur tampilan
                   </Link>
                 )}
                 <Link className="dashboardTextLink" href="/">

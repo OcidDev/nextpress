@@ -44,6 +44,7 @@ export type DashboardData = {
     hasAuthor: boolean
     hasSiteIdentity: boolean
     hasPost: boolean
+    hasNavigation: boolean
   }
 }
 
@@ -200,6 +201,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       hasAuthor: stats.authors > 0,
       hasSiteIdentity: site.success,
       hasPost: stats.all > 0,
+      hasNavigation: site.success && site.data.navigation.length > 0,
     },
   }
 }
@@ -265,6 +267,7 @@ async function getAuthorDashboard(owner: { id: string; role: string }): Promise<
       hasAuthor: !!profiles[0]?.value,
       hasPost: all > 0,
       hasSiteIdentity: false,
+      hasNavigation: false,
     },
   }
 }

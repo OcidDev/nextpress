@@ -1,13 +1,11 @@
+import { ThemePage } from '@/lib/themes/ThemePage'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getAuthor, getPosts, pageNumber } from '@/lib/db/queries/posts'
 import { PostList } from '@/components/blog/PostList'
 import { MainContainer } from '@/components/layout/MainContainer'
-import { SiteFrame } from '@/components/site/SiteFrame'
 import { publicPageMetadata } from '@/lib/content/metadata'
-
 export const dynamic = 'force-dynamic'
-
 export async function generateMetadata({
   params,
   searchParams,
@@ -24,7 +22,6 @@ export async function generateMetadata({
     page: pageNumber((await searchParams).page),
   })
 }
-
 export default async function Author({
   params,
   searchParams,
@@ -37,12 +34,15 @@ export default async function Author({
   if (!author) notFound()
   const result = await getPosts({ authorSlug: slug, page: pageNumber((await searchParams).page) })
   return (
-    <SiteFrame>
+    <ThemePage
+      query={{ kind: 'author', authorSlug: slug, id: author.id }}
+      context={{ archive: { result, basePath: `/author/${slug}` } }}
+    >
       <MainContainer>
         <h1>{author.name}</h1>
         <p>{author.bio}</p>
         <PostList result={result} basePath={`/author/${slug}`} />
       </MainContainer>
-    </SiteFrame>
+    </ThemePage>
   )
 }

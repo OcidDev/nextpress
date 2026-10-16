@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/widget-area",
+      "props": {
+        "slot": "footer"
+      }
+    },
+    {
+      "block": "core/site-footer",
+      "props": {
+        "layout": "compact"
+      }
+    }
+  ]
+}

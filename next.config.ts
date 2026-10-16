@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: '6mb' } },
 
   images: {
+    // Host gambar eksternal yang tetap diizinkan untuk konten yang sudah ada.
     remotePatterns: [
       { protocol: 'https', hostname: '*.bp.blogspot.com' },
       { protocol: 'https', hostname: 'blogger.googleusercontent.com' },
@@ -27,11 +28,13 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/:path*',
+        // Plugin responses supply a stronger sandbox CSP of their own. Next's
+        // configured headers replace route headers with the same name.
+        source: '/:path((?!api/plugins(?:/|$)).*)',
         headers: [{ key: 'Content-Security-Policy', value: "frame-ancestors 'self'" }],
       },
-      // The CMS only ever embeds its own origin.
-      ...['/admin/:path*'].map((source) => ({
+      // Keep public ad frames compatible; CMS/preview only embed this origin.
+      ...['/admin/:path*', '/preview/:path*'].map((source) => ({
         source,
         headers: [
           {

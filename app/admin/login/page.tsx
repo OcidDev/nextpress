@@ -34,7 +34,7 @@ export default async function LoginPage({
             <br />
             dimulai di sini.
           </h1>
-          <p>Tulis, terbitkan, dan kelola situs Anda dalam satu ruang kerja.</p>
+          <p>Tulis, terbitkan, dan kelola blog Anda dalam satu ruang kerja.</p>
         </div>
         <small>Tempat untuk cerita dan gagasan Anda.</small>
       </div>
@@ -55,7 +55,7 @@ export default async function LoginPage({
           </p>
         )}
         <Link href="/" className="loginBack">
-          ← Kembali ke situs
+          ← Kembali ke blog
         </Link>
       </section>
     </main>

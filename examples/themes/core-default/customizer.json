@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "controls": [
+    {
+      "id": "background",
+      "label": "Latar belakang",
+      "group": "Warna",
+      "type": "color",
+      "default": "#f9f9f9"
+    },
+    {
+      "id": "text",
+      "label": "Teks",
+      "group": "Warna",
+      "type": "color",
+      "default": "#111111"
+    },
+    {
+      "id": "accent",
+      "label": "Tautan dan tombol",
+      "group": "Warna",
+      "type": "color",
+      "default": "#111111"
+    },
+    {
+      "id": "button-text",
+      "label": "Teks tombol",
+      "group": "Warna",
+      "type": "color",
+      "default": "#ffffff"
+    },
+    {
+      "id": "muted",
+      "label": "Teks sekunder",
+      "group": "Warna",
+      "type": "color",
+      "default": "#555555"
+    },
+    {
+      "id": "border",
+      "label": "Garis pemisah",
+      "group": "Warna",
+      "type": "color",
+      "default": "#dedede"
+    },
+    {
+      "id": "heading-font",
+      "label": "Font judul",
+      "group": "Tipografi",
+      "type": "select",
+      "default": "theme-core-default-cardo, Georgia, serif",
+      "options": [
+        {
+          "label": "Cardo \u2014 serif",
+          "value": "theme-core-default-cardo, Georgia, serif"
+        },
+        {
+          "label": "Inter \u2014 sans serif",
+          "value": "theme-core-default-inter, Arial, sans-serif"
+        },
+        {
+          "label": "Sistem \u2014 sans serif",
+          "value": "Arial, sans-serif"
+        }
+      ]
+    },
+    {
+      "id": "body-font",
+      "label": "Font isi",
+      "group": "Tipografi",
+      "type": "select",
+      "default": "theme-core-default-inter, Arial, sans-serif",
+      "options": [
+        {
+          "label": "Cardo \u2014 serif",
+          "value": "theme-core-default-cardo, Georgia, serif"
+        },
+        {
+          "label": "Inter \u2014 sans serif",
+          "value": "theme-core-default-inter, Arial, sans-serif"
+        },
+        {
+          "label": "Sistem \u2014 sans serif",
+          "value": "Arial, sans-serif"
+        }
+      ]
+    },
+    {
+      "id": "font-size",
+      "label": "Ukuran teks",
+      "group": "Tipografi",
+      "type": "range",
+      "default": 16,
+      "min": 14,
+      "max": 22,
+      "step": 1,
+      "unit": "px"
+    },
+    {
+      "id": "content-width",
+      "label": "Lebar situs",
+      "group": "Tata letak",
+      "type": "range",
+      "default": 1280,
+      "min": 800,
+      "max": 1600,
+      "step": 40,
+      "unit": "px"
+    },
+    {
+      "id": "reading-width",
+      "label": "Lebar isi artikel",
+      "group": "Tata letak",
+      "type": "range",
+      "default": 800,
+      "min": 560,
+      "max": 960,
+      "step": 40,
+      "unit": "px"
+    },
+    {
+      "id": "columns",
+      "label": "Kolom artikel desktop",
+      "group": "Tata letak",
+      "type": "range",
+      "default": 3,
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "unit": ""
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "name": "Bawaan",
+      "values": {}
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "values": {
+        "background": "#EBEBEF",
+        "text": "#1C2930",
+        "accent": "#1C2930",
+        "button-text": "#EBEBEF",
+        "muted": "#37505d",
+        "border": "#96A5B2"
+      }
+    },
+    {
+      "id": "mint",
+      "name": "Mint",
+      "values": {
+        "background": "#e4efeb",
+        "text": "#000000",
+        "accent": "#000000",
+        "button-text": "#e4efeb",
+        "muted": "#353535",
+        "border": "#A4A4A4"
+      }
+    },
+    {
+      "id": "onyx",
+      "name": "Onyx",
+      "values": {
+        "background": "#272727",
+        "text": "#f9f9f9",
+        "accent": "#f9f9f9",
+        "button-text": "#272727",
+        "muted": "#B7B7B7",
+        "border": "#909090"
+      }
+    }
+  ]
+}

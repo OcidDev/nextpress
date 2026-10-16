@@ -1,3 +1,9 @@
+import {
+  getContentSeoProvider,
+  lockContentSeo,
+  saveContentSeo,
+} from '@/lib/plugins/content-seo-server'
+import { initializeActiveTheme } from '@/lib/themes/manager'
 import { withOptionsTransaction } from '@/lib/core/options-server'
 import { settingsSchema } from '@/lib/content/settings'
 import { getSettings } from './settings'
@@ -8,7 +14,7 @@ import {
 } from '@/lib/content/permalink-server'
 import 'server-only'
 import { validatePageParent } from '@/lib/content/page-tree'
-import { isPageTemplate } from '@/lib/content/page-templates'
+import { getPageTemplates } from '@/lib/themes/page-templates'
 import sanitizeHtml from 'sanitize-html'
 import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import { requireCapability } from '@/lib/admin'
@@ -135,6 +141,7 @@ export async function editorOptions() {
     storedDefaultCategory().then((stored) => resolveDefaultCategory(stored)),
   ])
   return {
+    contentSeo: await getContentSeoProvider(),
     permalinkSettings: {
       structure: (await getSettings()).permalinkStructure,
       timezone: (await getSettings()).timezone,
@@ -292,7 +299,11 @@ export async function savePostData(data: FormData) {
   const words = wordCount(content)
   if (input.status === 'published' && words === 0)
     throw new Error('Isi artikel wajib diisi sebelum diterbitkan')
-  await withOptionsTransaction(async (tx) => {
+  await withOptionsTransaction(async (tx, options) => {
+    await initializeActiveTheme(tx, options)
+    const seoProvider = await lockContentSeo(tx)
+    if (data.has('contentSeoProvider'))
+      await validateMediaReferences(tx, '', String(data.get('seoImage') || ''))
     await validateMediaReferences(tx, content, input.featuredImage)
     await lockContentStructure(tx)
     const [old] = input.id
@@ -330,6 +341,7 @@ export async function savePostData(data: FormData) {
         old && (old.status === 'published' || input.status !== 'published')
           ? old.publishedAt
           : new Date(),
+      seo: saveContentSeo(seoProvider, data, old?.seo),
     }
     savedVersion = values.updatedAt.toISOString()
     if (old) await tx.update(posts).set(values).where(eq(posts.id, id))
@@ -399,8 +411,12 @@ export async function savePageData(data: FormData) {
   const input = pageInput.parse(Object.fromEntries(data))
   const id = input.id || newId()
   const content = cleanHtml(input.content)
+  // Page attributes share the activation/plugin locks while validating template availability.
   return getDb().transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
+    const seoProvider = await lockContentSeo(tx)
+    if (data.has('contentSeoProvider'))
+      await validateMediaReferences(tx, '', String(data.get('seoImage') || ''))
     await validateMediaReferences(tx, content)
     await lockContentStructure(tx)
     const [old] = input.id
@@ -423,8 +439,14 @@ export async function savePageData(data: FormData) {
       })
       .from(pages)
     validatePageParent(pageRows, id, parentId)
-    if (pageTemplate !== 'default' && pageTemplate !== old?.pageTemplate && !isPageTemplate(pageTemplate))
-      throw new Error('Templat laman tidak dikenal. Muat ulang editor dan pilih templat lain.')
+    if (
+      pageTemplate !== 'default' &&
+      pageTemplate !== old?.pageTemplate &&
+      !(await getPageTemplates()).some((template) => template.value === pageTemplate)
+    )
+      throw new Error(
+        'Templat tidak tersedia pada tema atau plugin aktif. Muat ulang editor dan pilih templat lain.',
+      )
     const values = {
       title: input.title,
       slug: savedSlug,
@@ -433,6 +455,7 @@ export async function savePageData(data: FormData) {
       pageTemplate,
       content,
       updatedAt: new Date(Math.max(Date.now(), old ? old.updatedAt.getTime() + 1 : 0)),
+      seo: saveContentSeo(seoProvider, data, old?.seo),
     }
     if (old) await tx.update(pages).set(values).where(eq(pages.id, id))
     else await tx.insert(pages).values({ id, ...values })

@@ -55,3 +55,6 @@ export function articlePlainText(source: string) {
   return decodeText(plainText(source))
 }
 
+export function escapedJsonLd(value: unknown) {
+  return JSON.stringify(value).replace(/</g, '\\u003c')
+}

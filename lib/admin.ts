@@ -6,6 +6,7 @@ import { cache } from 'react'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { user } from '@/lib/db/auth-schema'
+import { type Capability } from '@/lib/extensions/capabilities'
 import { getRequestRoles } from '@/lib/core/roles-server'
 import { canonicalRole, type PrimitiveCapability } from '@/lib/core/roles'
 
@@ -49,7 +50,7 @@ export async function requireAdmin() {
 }
 
 /** Resolve current server privileges for both pages and forged action requests. */
-export async function requireCapability(capability: PrimitiveCapability) {
+export async function requireCapability(capability: PrimitiveCapability | Capability) {
   const session = await requireCmsUser()
   if (!session.user.capabilities.includes(capability)) redirect('/admin?denied=1')
   return session

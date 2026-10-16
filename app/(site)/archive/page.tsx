@@ -1,12 +1,10 @@
+import { ThemePage } from '@/lib/themes/ThemePage'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getArchiveYears } from '@/lib/db/queries/posts'
 import { MainContainer } from '@/components/layout/MainContainer'
-import { SiteFrame } from '@/components/site/SiteFrame'
 import { publicPageMetadata } from '@/lib/content/metadata'
-
 export const dynamic = 'force-dynamic'
-
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({
     title: 'Arsip',
@@ -14,11 +12,10 @@ export async function generateMetadata(): Promise<Metadata> {
     path: '/archive',
   })
 }
-
 export default async function Archive() {
   const years = await getArchiveYears()
   return (
-    <SiteFrame>
+    <ThemePage query={{ kind: 'date' }}>
       <MainContainer>
         <h1>Arsip</h1>
         {years.length ? (
@@ -35,6 +32,6 @@ export default async function Archive() {
           <p>Belum ada artikel.</p>
         )}
       </MainContainer>
-    </SiteFrame>
+    </ThemePage>
   )
 }

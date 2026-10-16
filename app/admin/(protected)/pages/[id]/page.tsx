@@ -1,4 +1,5 @@
 import { requireCapability } from '@/lib/admin'
+import { getContentSeoProvider } from '@/lib/plugins/content-seo-server'
 import { userHasCapability } from '@/lib/core/roles'
 import { notFound } from 'next/navigation'
 import { adminPage } from '@/lib/db/queries/admin-content'
@@ -18,6 +19,7 @@ export default async function EditPage({
     <>
       <h1>Edit halaman</h1>
       <PageEditor
+        contentSeo={await getContentSeoProvider()}
         canUpload={userHasCapability(session.user, 'upload_files')}
         key={page.id}
         page={page}

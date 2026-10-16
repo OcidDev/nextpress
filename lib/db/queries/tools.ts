@@ -1,4 +1,5 @@
 import { postPaths } from '@/lib/content/permalink-server'
+import { getActiveTheme } from '@/lib/themes/manager'
 import 'server-only'
 import { eq, sql } from 'drizzle-orm'
 import { getDb, hasDatabase } from '@/lib/db'
@@ -10,6 +11,7 @@ import {
   categories,
   postCategories,
   postTags,
+  plugins,
 } from '@/lib/db/schema'
 import {
   runSiteHealthCheck,
@@ -32,18 +34,35 @@ export async function getSiteHealthReportData(): Promise<SiteHealthReport> {
   await requireCapability('manage_options')
 
   let dbConnected = false
+  let activeTheme = 'unknown'
+  let activePluginsList: string[] = []
 
   if (hasDatabase()) {
     try {
-      await getDb().execute(sql`SELECT 1`)
+      const db = getDb()
+      await db.execute(sql`SELECT 1`)
       dbConnected = true
+
+      const pluginRows = await db
+        .select({ id: plugins.id })
+        .from(plugins)
+        .where(eq(plugins.enabled, true))
+      activePluginsList = pluginRows.map((p) => p.id)
     } catch {
       dbConnected = false
     }
   }
 
+  try {
+    activeTheme = (await getActiveTheme()).manifest.id
+  } catch {
+    // fallback
+  }
+
   return runSiteHealthCheck({
     dbConnected,
+    activeThemeId: activeTheme,
+    activePlugins: activePluginsList,
     envSecrets: {
       db_pass: '***',
       auth_secret: '***',
@@ -152,7 +171,7 @@ export async function exportWxrData(filters?: {
 
   const xml = exportWxr(items, siteInfo)
   const safeDate = new Date().toISOString().slice(0, 10)
-  const safeName = slugify(settings.name || 'nextpress') || 'wordpress'
+  const safeName = slugify(settings.name || 'blog') || 'wordpress'
   const filename = `${safeName}.wordpress.${safeDate}.xml`
 
   return { xml, filename }

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { ContentSeoPanel } from './ContentSeoPanel'
+import type { ContentSeoProvider } from '@/lib/plugins/content-seo'
 import Link from 'next/link'
 import { savePage } from '@/server/actions/content'
 import { HtmlEditor } from './HtmlEditor'
@@ -24,11 +26,13 @@ export function PageEditor({
   page,
   saved = false,
   attributes,
+  contentSeo,
   canUpload,
 }: {
   page?: PageRow
   saved?: boolean
   attributes: PageAttributeChoices
+  contentSeo: ContentSeoProvider | null
   canUpload: boolean
 }) {
   const [fields, setFields] = useState(() => initialFields(page))
@@ -103,6 +107,13 @@ export function PageEditor({
             <small>URL: /{fields.slug || '…'}</small>
           </section>
           <HtmlEditor canUpload={canUpload} content={initialContent} onChange={markDirty} />
+          <ContentSeoPanel
+            provider={contentSeo}
+            initial={page?.seo}
+            title={fields.title}
+            canUpload={canUpload}
+            onChange={markDirty}
+          />
         </div>
         <aside className="adminEditorAside" aria-label="Pengaturan halaman">
           <section className="adminEditorPanel">
@@ -152,11 +163,19 @@ export function PageEditor({
                 onChange={(event) => update('pageTemplate', event.target.value)}
               >
                 <option value="default">Templat bawaan</option>
-                {attributes.templates.map((template) => (
-                  <option key={template.value} value={template.value}>
-                    {template.label}
-                  </option>
-                ))}
+                {[...new Set(attributes.templates.map((template) => template.source))].map(
+                  (source) => (
+                    <optgroup key={source} label={source}>
+                      {attributes.templates
+                        .filter((template) => template.source === source)
+                        .map((template) => (
+                          <option key={template.value} value={template.value}>
+                            {template.label}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ),
+                )}
                 {fields.pageTemplate !== 'default' &&
                   !attributes.templates.some(
                     (template) => template.value === fields.pageTemplate,
@@ -168,11 +187,11 @@ export function PageEditor({
             {fields.pageTemplate !== 'default' &&
             !attributes.templates.some((template) => template.value === fields.pageTemplate) ? (
               <small>
-                Templat tersimpan tidak dikenal. Laman memakai templat
+                Templat tersimpan tidak tersedia pada tema/plugin aktif. Laman memakai templat
                 bawaan sampai templat tersebut tersedia kembali atau Anda memilih penggantinya.
               </small>
             ) : (
-              <small>Pilihan templat disediakan oleh desain situs bawaan.</small>
+              <small>Pilihan templat disediakan oleh tema dan plugin aktif.</small>
             )}
             <label>
               Urutan

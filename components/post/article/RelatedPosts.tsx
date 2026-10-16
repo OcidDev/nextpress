@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ArticleLink } from '@/lib/db/queries/related-posts'
-import { SectionHeading } from '@/components/site/SectionHeading'
+import { SectionHeading } from '@/components/theme/SectionHeading'
 import styles from '../ArticleContent.module.css'
 
 /**

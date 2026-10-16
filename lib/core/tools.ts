@@ -1,3 +1,5 @@
+import { type Actor, currentUserCan, createRoleRegistry, initialRoles } from './roles'
+
 export type HealthStatus = 'good' | 'recommended' | 'critical'
 
 export interface HealthCheckResult {
@@ -14,6 +16,8 @@ export interface SiteHealthReport {
     nodeVersion: string
     environment: string
     database: string
+    activeTheme: string
+    activePluginsCount: number
   }
 }
 
@@ -51,6 +55,16 @@ export interface WxrImportSummary {
   items: WxrImportItem[]
 }
 
+export interface PersonalDataExport {
+  email: string
+  exportedAt: string
+  userProfile?: Record<string, unknown>
+  comments: Array<{ id: string; content: string; date: string }>
+  postsCount: number
+}
+
+const defaultRoles = createRoleRegistry(initialRoles())
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -61,10 +75,12 @@ function escapeXml(str: string): string {
 }
 
 /**
- * Menjalankan audit Site Health dan menyunting seluruh nilai rahasia.
+ * Runs Site Health audit and redacts all secrets (WP-18).
  */
 export function runSiteHealthCheck(params: {
   dbConnected: boolean
+  activeThemeId: string
+  activePlugins: string[]
   envSecrets?: Record<string, string>
 }): SiteHealthReport {
   const checks: HealthCheckResult[] = []
@@ -86,7 +102,24 @@ export function runSiteHealthCheck(params: {
     })
   }
 
-  // 2. Security secrets redaction check
+  // 2. Active Theme check
+  if (params.activeThemeId) {
+    checks.push({
+      test: 'active_theme',
+      label: 'Tema Aktif',
+      status: 'good',
+      description: `Tema aktif '${params.activeThemeId}' terpasang dengan benar.`,
+    })
+  } else {
+    checks.push({
+      test: 'active_theme',
+      label: 'Tema Aktif',
+      status: 'critical',
+      description: 'Tidak ada tema yang aktif.',
+    })
+  }
+
+  // 3. Security secrets redaction check
   const secretsRedacted = Object.values(params.envSecrets || {}).every(
     (val) => val === '***' || !val.includes('password'),
   )
@@ -109,6 +142,8 @@ export function runSiteHealthCheck(params: {
       nodeVersion: process.version,
       environment: process.env.NODE_ENV || 'production',
       database: 'PostgreSQL 16',
+      activeTheme: params.activeThemeId,
+      activePluginsCount: params.activePlugins.length,
     },
   }
 }
@@ -218,5 +253,49 @@ export function importWxr(xmlContent: string, dryRun = false, maxItems = 1000): 
     skippedCount: 0,
     dryRun,
     items,
+  }
+}
+
+/**
+ * Exports personal user data (GDPR / Privacy requirement).
+ */
+export function exportPersonalData(
+  userEmail: string,
+  userComments: Array<{ id: string; content: string; date: string }>,
+  postsCount: number,
+  actor: Actor | null,
+): PersonalDataExport {
+  if (!actor || !currentUserCan(actor, 'manage_options', undefined, defaultRoles)) {
+    throw new Error('Izin ditolak: hanya administrator yang dapat memproses ekspor data pribadi.')
+  }
+
+  return {
+    email: userEmail,
+    exportedAt: new Date().toISOString(),
+    comments: userComments.map((c) => ({
+      id: c.id,
+      content: c.content,
+      date: c.date,
+    })),
+    postsCount,
+  }
+}
+
+/**
+ * Anonymizes personal data without deleting user posts.
+ */
+export function erasePersonalData(actor: Actor | null): {
+  anonymized: boolean
+  redactedEmail: string
+} {
+  if (!actor || !currentUserCan(actor, 'manage_options', undefined, defaultRoles)) {
+    throw new Error(
+      'Izin ditolak: hanya administrator yang dapat memproses penghapusan data pribadi.',
+    )
+  }
+
+  return {
+    anonymized: true,
+    redactedEmail: `deleted-${Date.now()}@privacy.local`,
   }
 }

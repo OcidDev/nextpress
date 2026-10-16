@@ -3,7 +3,7 @@ import { requireCapability } from '@/lib/admin'
 import { getDb } from '@/lib/db'
 import { pages } from '@/lib/db/schema'
 import { pageParentChoices } from '@/lib/content/page-tree'
-import { pageTemplateChoices } from '@/lib/content/page-templates'
+import { getPageTemplates } from '@/lib/themes/page-templates'
 
 export async function getPageAttributeChoices(excludeId?: string) {
   await requireCapability('edit_others_pages')
@@ -16,14 +16,14 @@ export async function getPageAttributeChoices(excludeId?: string) {
         menuOrder: pages.menuOrder,
       })
       .from(pages),
-    Promise.resolve(pageTemplateChoices),
+    getPageTemplates(),
   ])
   return {
     parents: pageParentChoices(rows, excludeId).map((row) => ({
       id: row.id,
       label: `${'— '.repeat(row.depth)}${row.title}`,
     })),
-    templates: templates.map(({ value, label }) => ({ value, label })),
+    templates: templates.map(({ value, label, source }) => ({ value, label, source })),
   }
 }
 export type PageAttributeChoices = Awaited<ReturnType<typeof getPageAttributeChoices>>

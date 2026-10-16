@@ -1,10 +1,9 @@
+import { ThemePage } from '@/lib/themes/ThemePage'
 import type { Metadata } from 'next'
 import { MainContainer } from '@/components/layout/MainContainer'
 import { PostList } from '@/components/blog/PostList'
-import { SiteFrame } from '@/components/site/SiteFrame'
 import { getPosts, pageNumber } from '@/lib/db/queries/posts'
 import { publicPageMetadata } from '@/lib/content/metadata'
-
 export async function generateMetadata({
   searchParams,
 }: {
@@ -20,7 +19,6 @@ export async function generateMetadata({
     noIndex: true,
   })
 }
-
 export default async function SearchPage({
   searchParams,
 }: {
@@ -30,7 +28,10 @@ export default async function SearchPage({
   const query = typeof params.q === 'string' ? params.q.trim().slice(0, 200) : ''
   const result = await getPosts({ query, page: pageNumber(params.page) })
   return (
-    <SiteFrame>
+    <ThemePage
+      query={{ kind: 'search' }}
+      context={{ archive: { result, basePath: '/search', query } }}
+    >
       <MainContainer>
         <section className="panel">
           <h1>Cari artikel</h1>
@@ -49,6 +50,6 @@ export default async function SearchPage({
         </section>
         <PostList result={result} basePath="/search" query={query} />
       </MainContainer>
-    </SiteFrame>
+    </ThemePage>
   )
 }

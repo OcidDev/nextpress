@@ -1,0 +1,72 @@
+.header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  background: var(--headerB);
+  color: var(--headerC);
+  transition: box-shadow 0.2s;
+}
+.header[data-scrolled='true'] {
+  box-shadow: 0 2px 8px rgb(0 0 0 / 7%);
+}
+.inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: var(--headerH);
+  padding-inline: 20px;
+  width: 100%;
+}
+.actions {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+.inner > button,
+.actions :global(.iconButton) {
+  flex-shrink: 0;
+}
+@media (min-width: 897px) {
+  :global(.themeSite[data-design='reference']) .header[data-layout='standard'] .actions {
+    flex: 1 0 auto;
+    min-width: 0;
+  }
+  :global(.themeSite[data-design='reference'])
+    .header[data-layout='standard']
+    .actions
+    :global(.headerActions) {
+    justify-content: flex-end;
+  }
+  :global(.themeSite[data-design='reference'])
+    .header[data-layout='standard']
+    .actions
+    :global(.headerSearch) {
+    margin-inline-end: auto;
+  }
+}
+@media (max-width: 500px) {
+  .inner {
+    gap: 8px;
+    padding-inline: 12px;
+    height: var(--headerHm);
+  }
+}
+.header[data-layout='centered'] .inner {
+  position: relative;
+  justify-content: center;
+}
+.header[data-layout='centered'] .inner > button {
+  position: absolute;
+  inset-inline-start: 20px;
+}
+.header[data-layout='centered'] .actions {
+  position: absolute;
+  inset-inline-end: 20px;
+}
+@media (max-width: 500px) {
+  .header[data-layout='centered'] .inner {
+    justify-content: flex-start;
+  }
+  .header[data-layout='centered'] .inner > button {
+    position: static;
+  }
+}

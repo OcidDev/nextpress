@@ -1,10 +1,10 @@
-import { SiteFrame } from '@/components/site/SiteFrame'
+import { ThemePage } from '@/lib/themes/ThemePage'
 import Link from 'next/link'
 import { MainContainer } from '@/components/layout/MainContainer'
 
 export default function NotFound() {
   return (
-    <SiteFrame>
+    <ThemePage query={{ kind: '404' }}>
       <MainContainer>
         <div className="panel emptyState">
           <span>404</span>
@@ -15,6 +15,6 @@ export default function NotFound() {
           </Link>
         </div>
       </MainContainer>
-    </SiteFrame>
+    </ThemePage>
   )
 }

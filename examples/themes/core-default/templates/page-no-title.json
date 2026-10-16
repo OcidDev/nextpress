@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "header"
+      }
+    },
+    {
+      "block": "core/content-layout",
+      "props": {
+        "layout": "plain"
+      },
+      "children": [
+        {
+          "block": "core/group",
+          "props": {
+            "tagName": "article",
+            "className": "cmsPageArticle"
+          },
+          "children": [
+            {
+              "block": "core/post-content"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "block": "core/template-part",
+      "props": {
+        "slug": "footer"
+      }
+    }
+  ]
+}

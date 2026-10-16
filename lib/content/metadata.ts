@@ -1,7 +1,11 @@
+import { effectiveContentSeo } from '@/lib/plugins/content-seo-server'
+import type { SEO } from '@/types/post'
 import 'server-only'
 import type { Metadata } from 'next'
 import { siteConfig } from '@/data/site-config'
 import { getSettings } from '@/lib/db/queries/settings'
+import { applyFilters } from '@/lib/extensions/hooks'
+import { bootExtensions } from '@/lib/extensions/bootstrap'
 
 export async function publicPageMetadata({
   title,
@@ -11,6 +15,7 @@ export async function publicPageMetadata({
   noIndex = false,
   absoluteTitle = false,
   keywords,
+  seo: storedSeo,
 }: {
   title?: string
   description?: string
@@ -19,28 +24,39 @@ export async function publicPageMetadata({
   noIndex?: boolean
   absoluteTitle?: boolean
   keywords?: string[]
+  seo?: SEO | null
 }): Promise<Metadata> {
+  // Metadata dihasilkan per segmen halaman, dan pada navigasi sisi klien layout
+  // akar tidak ikut dirender ulang — jadi kernel dimuat di sini juga.
+  await bootExtensions()
   const settings = await getSettings()
-  const name = title || settings.name
-  const pageTitle = page > 1 ? `${name} — Halaman ${page}` : name
-  const summary = description || settings.description
+  const seo = await effectiveContentSeo(storedSeo)
+  const name = seo.title || title || settings.name
+  // `document_title` (EXT-01) berjalan atas judul akhir, termasuk akhiran
+  // "— Halaman N", supaya ekstensi dapat mengubah judul dokumen apa adanya.
+  const pageTitle = await applyFilters(
+    'document_title',
+    page > 1 ? `${name} — Halaman ${page}` : name,
+  )
+  const summary = seo.description || description || settings.description
   const url = new URL(path, siteConfig.url)
   if (page > 1) url.searchParams.set('page', String(page))
   else url.searchParams.delete('page')
-  const canonical = url.href
-  const image = new URL('/opengraph-image', siteConfig.url).href
+  const canonical = seo.canonical || url.href
+  const image = new URL(seo.ogImage || '/opengraph-image', siteConfig.url).href
   return {
     // Next 15 reduces origin URLs to .origin when metadataBase is present,
     // removing the homepage pagination query. These URLs are already absolute.
     metadataBase: null,
     title: absoluteTitle ? { absolute: pageTitle } : pageTitle,
     description: summary,
-    keywords,
+    keywords: seo.keywords || keywords,
     alternates: {
       canonical,
       types: { 'application/rss+xml': new URL('/feed.xml', siteConfig.url).href },
     },
-    robots: !settings.blogPublic || noIndex ? { index: false, follow: true } : undefined,
+    robots:
+      !settings.blogPublic || noIndex || seo.noIndex ? { index: false, follow: true } : undefined,
     openGraph: {
       type: 'website',
       title: pageTitle,

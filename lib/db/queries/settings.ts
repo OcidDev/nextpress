@@ -1,13 +1,15 @@
+import { initializeActiveTheme } from '@/lib/themes/manager'
 import { lockContentStructure } from '@/lib/core/content-mapping'
 import { rememberPostRoutes, validatePublicPermalinks } from '@/lib/content/permalink-server'
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { getDb, hasDatabase } from '@/lib/db'
 import { media, pages } from '@/lib/db/schema'
 import { getRequestOptions, withOptionsTransaction } from '@/lib/core/options-server'
 import { defaultSettings, settingsSchema, SettingsValidationError } from '@/lib/content/settings'
 import { resolveDefaultCategory, lockCategoryStructure } from './taxonomy'
 import { requireAdmin } from '@/lib/admin'
+import { syncAppearanceSiteSettings } from './appearance'
 type SettingsTransaction = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]
 async function validateLogo(tx: SettingsTransaction, logo: string) {
   const id = /(?:^|\/)api\/media\/([a-f0-9]{32})(?:[?#]|$)/.exec(logo)?.[1]
@@ -23,6 +25,8 @@ export async function saveSettingsData(value: unknown) {
   await requireAdmin()
   const parsed = settingsSchema.parse(value)
   await withOptionsTransaction(async (tx, options) => {
+    await initializeActiveTheme(tx, options)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
     await lockContentStructure(tx)
     const current = settingsSchema.parse(await options.getOption('site'))
     await rememberPostRoutes(tx, current)
@@ -30,6 +34,7 @@ export async function saveSettingsData(value: unknown) {
     await validateReading(tx, parsed)
     await validateDefaultCategory(tx, parsed)
     await validateLogo(tx, parsed.logo)
+    await syncAppearanceSiteSettings(tx, parsed, options)
     await options.updateOption('site', parsed)
   })
 }
@@ -75,6 +80,8 @@ export async function saveSettingsSectionData(
   >
   const patch = settingsSchema.pick(mask).strict().parse(value)
   await withOptionsTransaction(async (tx, options) => {
+    await initializeActiveTheme(tx, options)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
     const current = settingsSchema.parse(await options.getOption('site'))
     const parsed = settingsSchema.parse({ ...current, ...patch })
     if (
@@ -88,6 +95,7 @@ export async function saveSettingsSectionData(
     if (section === 'reading') await validateReading(tx, parsed)
     if (section === 'writing') await validateDefaultCategory(tx, parsed)
     if (section === 'general') await validateLogo(tx, parsed.logo)
+    await syncAppearanceSiteSettings(tx, parsed, options, [...keys])
     await options.updateOption('site', parsed)
   })
 }

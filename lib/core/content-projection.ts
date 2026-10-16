@@ -12,6 +12,7 @@ import {
   legacyContentMap,
 } from '@/lib/db/data-schema'
 import type { JsonValue } from '@/lib/core/options'
+import type { Post, SEO } from '@/types'
 import { slugify } from '@/lib/utils'
 import { stableId, categoryTaxId, tagId, tagTaxId, legacyMetaId } from './content-identity'
 import {
@@ -19,6 +20,8 @@ import {
   coreContentHash,
   getContentMapping,
   legacySourceRow,
+  legacySourceHash,
+  legacySourceMatches,
   lockContentStructure,
   projectionTarget,
 } from './content-mapping'
@@ -429,3 +432,218 @@ export async function deleteCoreProjection(
   })
 }
 
+/**
+ * Explicit rollback/compatibility adapter. Runtime core services do not call this
+ * before cutover: legacy remains the only writer for mapped records.
+ * A shape the legacy schema cannot represent is rejected, never downgraded.
+ */
+export async function projectCoreToLegacy(tx: CoreTransaction, contentId: string) {
+  return withProjectionGuard(async () => {
+    await lockContentStructure(tx)
+    const [c] = await tx.select().from(content).where(eq(content.id, contentId))
+    if (!c || !['post', 'page'].includes(c.type)) return
+    if (
+      c.format !== 'html' ||
+      c.visibility !== 'public' ||
+      c.parentId ||
+      !['publish', 'draft', 'pending'].includes(c.status) ||
+      (c.type === 'page' && c.status !== 'publish')
+    )
+      throw new Error('Konten tidak dapat direpresentasikan oleh schema legacy; rollback ditolak.')
+    const source = c.type as 'post' | 'page'
+    const [mapping] = await tx
+      .select()
+      .from(legacyContentMap)
+      .where(eq(legacyContentMap.contentId, c.id))
+    if (mapping && mapping.source !== source) throw new Error('Mapping jenis konten tidak valid.')
+    const sourceId = mapping?.sourceId ?? c.id
+    if (sourceId.length > 32) throw new Error('Identitas legacy tidak dapat direpresentasikan.')
+    const oldRow = await legacySourceRow(tx, source, sourceId)
+    if (mapping) {
+      if (!oldRow || !(await legacySourceMatches(tx, { ...mapping, source })))
+        throw new Error('Sumber legacy telah berubah; rollback tidak boleh menimpa edit pengguna.')
+    } else if (oldRow) {
+      throw new Error('Identitas legacy sudah digunakan; rollback memerlukan mapping eksplisit.')
+    }
+    const table = source === 'post' ? posts : pages
+    const [collision] = await tx
+      .select({ id: table.id })
+      .from(table)
+      .where(sql`${table.slug}=${c.slug} and ${table.id}<>${sourceId}`)
+      .limit(1)
+    if (collision) throw new Error('Slug legacy bertabrakan; URL tidak akan diubah otomatis.')
+    const metaRows = await tx
+      .select({ key: contentMeta.key, value: contentMeta.value })
+      .from(contentMeta)
+      .where(eq(contentMeta.objectId, c.id))
+      .orderBy(contentMeta.id)
+    const allMeta = Object.fromEntries(metaRows.map((row) => [row.key, row.value]))
+    const meta = (allMeta._legacy_fields as Record<string, unknown>) ?? {}
+    // Older prototype projections used camelCase; S2A stores PostgreSQL snake_case.
+    const field = (snake: string, camel: string) => meta[snake] ?? meta[camel]
+    if (source === 'post') {
+      let authorId = c.legacyAuthorId
+      if (authorId) {
+        if (
+          !(await tx.select({ id: authors.id }).from(authors).where(eq(authors.id, authorId)))
+            .length
+        )
+          throw new Error('Profil atribusi penulis hilang; rollback ditolak.')
+      } else if (c.authorId) {
+        const [profile] = await tx
+          .select({ id: authors.id })
+          .from(authors)
+          .where(eq(authors.userId, c.authorId))
+        if (profile) authorId = profile.id
+        else {
+          // Provision only the actual owner. Never attribute an orphan to the first author/admin.
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-user-authors'))`)
+          const owner = (
+            await tx.execute(sql`select name,image from cms_user where id=${c.authorId}`)
+          ).rows[0]
+          if (!owner) throw new Error('Akun penulis hilang; rollback ditolak.')
+          authorId = stableId('core-author-profile', c.authorId)
+          await tx.insert(authors).values({
+            id: authorId,
+            userId: c.authorId,
+            name: String(owner.name).slice(0, 160),
+            avatar: owner.image as string | null,
+            slug: `penulis-${authorId}`,
+          })
+        }
+      }
+      if (!authorId) throw new Error('Konten tanpa atribusi penulis tidak dapat diproyeksikan.')
+      const values = {
+        title: c.title,
+        slug: c.slug,
+        excerpt: c.excerpt,
+        content: c.content,
+        authorId,
+        status: c.status === 'publish' ? 'published' : c.status,
+        allowComments: c.commentStatus === 'open',
+        featuredImage: (allMeta.featured_image ??
+          field('featured_image', 'featuredImage') ??
+          null) as string | null,
+        featuredImageAlt: (allMeta.featured_image_alt ??
+          field('featured_image_alt', 'featuredImageAlt') ??
+          null) as string | null,
+        isSponsored: Boolean(allMeta.is_sponsored ?? field('is_sponsored', 'isSponsored')),
+        isProduct: Boolean(allMeta.is_product ?? field('is_product', 'isProduct')),
+        isYoutube: Boolean(allMeta.is_youtube ?? field('is_youtube', 'isYoutube')),
+        showAds:
+          field('show_ads', 'showAds') === undefined ? true : Boolean(field('show_ads', 'showAds')),
+        readingTime: Number(field('reading_time', 'readingTime') ?? 1),
+        wordCount: Number(field('word_count', 'wordCount') ?? 0),
+        viewCount: Number(oldRow?.view_count ?? field('view_count', 'viewCount') ?? 0),
+        commentCount: Number(oldRow?.comment_count ?? field('comment_count', 'commentCount') ?? 0),
+        layout: (allMeta.layout ?? meta.layout ?? 'default') as Post['layout'],
+        publishedAt: c.publishedAt ?? c.createdAt,
+        updatedAt: c.modifiedAt,
+        legacyPath: (allMeta.legacy_path ?? field('legacy_path', 'legacyPath') ?? null) as
+          string | null,
+        seo: (allMeta.seo ?? meta.seo ?? null) as SEO | null,
+      }
+      await tx
+        .insert(posts)
+        .values({ id: sourceId, ...values })
+        .onConflictDoUpdate({ target: posts.id, set: values })
+      await projectCorePostTermsToLegacy(tx, c.id, sourceId)
+    } else {
+      const values = {
+        title: c.title,
+        slug: c.slug,
+        content: c.content,
+        updatedAt: c.modifiedAt,
+        seo: (allMeta.seo ?? meta.seo ?? null) as SEO | null,
+      }
+      await tx
+        .insert(pages)
+        .values({ id: sourceId, ...values })
+        .onConflictDoUpdate({ target: pages.id, set: values })
+    }
+    await checkpointProjection(tx, source, sourceId, c.id)
+  })
+}
+
+async function projectCorePostTermsToLegacy(
+  tx: CoreTransaction,
+  contentId: string,
+  postId: string,
+) {
+  const assigned = (
+    await tx.execute(sql`select tt.id,tt.term_id,tt.taxonomy,tt.parent_id,
+    tt.description,t.name,t.slug from cms_term_relationships r
+    join cms_term_taxonomy tt on tt.id=r.term_taxonomy_id join cms_terms t on t.id=tt.term_id
+    where r.content_id=${contentId} and tt.taxonomy in ('category','post_tag') order by tt.id`)
+  ).rows
+  const visited = new Set<string>()
+  async function category(id: string, path = new Set<string>()): Promise<string> {
+    if (path.has(id) || path.size >= 64) throw new Error('Hierarki term tidak dapat diproyeksikan.')
+    const row = (
+      await tx.execute(sql`select tt.term_id,tt.parent_id,tt.description,t.name,t.slug
+      from cms_term_taxonomy tt join cms_terms t on t.id=tt.term_id
+      where tt.id=${id} and tt.taxonomy='category'`)
+    ).rows[0]
+    if (!row || String(row.slug).length > 160)
+      throw new Error('Kategori tidak dapat direpresentasikan.')
+    const termId = String(row.term_id)
+    if (visited.has(id)) return termId
+    path.add(id)
+    const parentId = row.parent_id ? await category(String(row.parent_id), path) : null
+    const [existing] = await tx.select().from(categories).where(eq(categories.id, termId))
+    // No per-term source checkpoint exists yet. Refuse conflicting edits rather than guess ownership.
+    if (
+      existing &&
+      (existing.name !== row.name ||
+        existing.slug !== row.slug ||
+        (existing.description ?? '') !== row.description ||
+        existing.parentId !== parentId)
+    )
+      throw new Error('Kategori legacy/core berbeda; rekonsiliasi taxonomy diperlukan.')
+    if (!existing)
+      await tx.insert(categories).values({
+        id: termId,
+        name: String(row.name),
+        slug: String(row.slug),
+        description: String(row.description),
+        parentId,
+      })
+    visited.add(id)
+    return termId
+  }
+  const categoryIds: string[] = [],
+    tags: string[] = []
+  for (const row of assigned) {
+    if (row.taxonomy === 'category') categoryIds.push(await category(String(row.id)))
+    else {
+      const name = String(row.name)
+      if (!name.length || name.length > 120) throw new Error('Tag tidak dapat direpresentasikan.')
+      tags.push(name)
+    }
+  }
+  await tx.delete(postCategories).where(eq(postCategories.postId, postId))
+  await tx.delete(postTags).where(eq(postTags.postId, postId))
+  for (const categoryId of new Set(categoryIds))
+    await tx.insert(postCategories).values({ postId, categoryId })
+  for (const tag of new Set(tags)) await tx.insert(postTags).values({ postId, tag })
+}
+
+/** Explicit reverse deletion uses the source-qualified mapping, never the core ID alone. */
+export async function deleteLegacyFromCore(tx: CoreTransaction, id: string, type: string) {
+  return withProjectionGuard(async () => {
+    await lockContentStructure(tx)
+    const [mapping] = await tx
+      .select()
+      .from(legacyContentMap)
+      .where(eq(legacyContentMap.contentId, id))
+    if (!mapping) return
+    if (mapping.source !== type) throw new Error('Mapping jenis konten tidak valid.')
+    if (
+      mapping.sourceHash !==
+      (await legacySourceHash(tx, mapping.source as 'post' | 'page', mapping.sourceId))
+    )
+      throw new Error('Sumber legacy telah berubah; penghapusan ditolak.')
+    if (type === 'post') await tx.delete(posts).where(eq(posts.id, mapping.sourceId))
+    else if (type === 'page') await tx.delete(pages).where(eq(pages.id, mapping.sourceId))
+  })
+}

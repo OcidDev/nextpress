@@ -75,7 +75,7 @@ export const pageInput = z
     pageTemplate: z
       .string()
       .max(200)
-      .regex(/^(?:default|page-no-title|page-with-sidebar|page-wide)$/)
+      .regex(/^(?:default|(?:theme|plugin):[a-z0-9-]+:[a-z][a-z0-9-]*)$/)
       .optional(),
     content: z.string().max(500000),
   })
