@@ -1,0 +1,59 @@
+.banner {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-height: var(--notifH);
+  padding: 12px 40px 12px 20px;
+  margin-bottom: 40px;
+  background: var(--notifU);
+  color: var(--notifC);
+  border-radius: 10px;
+  font-size: 13px;
+  overflow: hidden;
+}
+.banner::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -12px;
+  inset-inline-start: -12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 1.5%);
+  pointer-events: none;
+}
+.banner > * {
+  position: relative;
+}
+.banner p {
+  margin: 0;
+}
+.banner a {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--contentB);
+  color: var(--notifC);
+  box-shadow: 0 10px 8px -8px rgb(0 0 0 / 12%);
+  white-space: nowrap;
+}
+.banner button {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  width: 28px;
+  height: 28px;
+  font-size: 23px;
+  cursor: pointer;
+}
+@media (max-width: 500px) {
+  .banner {
+    margin-bottom: 25px;
+    font-size: 12px;
+  }
+}

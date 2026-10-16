@@ -1,0 +1,11 @@
+.sidebar {
+  align-self: stretch;
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 896px) {
+  .sidebar {
+    max-width: 500px;
+    margin: 50px auto 0;
+  }
+}

@@ -1,0 +1,10 @@
+# Paket yang memerlukan build script saat install.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+
+# Security audit: constrain vulnerable transitive versions until upstreams update.
+overrides:
+  'postcss@<8.5.23': 8.5.28
+  'esbuild@<0.25.0': 0.25.12

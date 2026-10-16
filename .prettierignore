@@ -1,0 +1,7 @@
+node_modules
+.next
+.local
+pnpm-lock.yaml
+drizzle
+public
+components/ui/icons

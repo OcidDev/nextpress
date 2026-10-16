@@ -1,0 +1,7 @@
+import type { SVGProps } from 'react'
+
+export function TimeSquareIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} className={["line", props.className].filter(Boolean).join(" ")} viewBox="0 0 24 24"><g transform="translate(2.000000, 2.000000)"><path d="M0.7501,10.0001 C0.7501,16.9371 3.0631,19.2501 10.0001,19.2501 C16.9371,19.2501 19.2501,16.9371 19.2501,10.0001 C19.2501,3.0631 16.9371,0.7501 10.0001,0.7501 C3.0631,0.7501 0.7501,3.0631 0.7501,10.0001 Z"/><polyline className="svgC" points="13.3902 12.0181 9.9992 9.9951 9.9992 5.6341"/></g></svg>
+  )
+}

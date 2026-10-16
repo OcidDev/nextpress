@@ -1,0 +1,33 @@
+.heading {
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 10px;
+  font-size: var(--widgetT);
+  font-weight: 400;
+  margin: 0 0 25px;
+  padding-inline-end: 60px;
+}
+.heading::after {
+  content: '';
+  width: var(--widgetTa);
+  height: 1px;
+  flex: none;
+  background: var(--widgetTac);
+}
+.heading::before {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  opacity: 0.3;
+  background:
+    radial-gradient(circle at 3px 3px, var(--widgetTac) 2.5px, transparent 3px),
+    radial-gradient(circle at 10px 3px, var(--widgetTac) 2.5px, transparent 3px),
+    radial-gradient(circle at 17px 3px, var(--widgetTac) 2.5px, transparent 3px),
+    radial-gradient(circle at 10px 10px, var(--widgetTac) 2.5px, transparent 3px),
+    radial-gradient(circle at 17px 10px, var(--widgetTac) 2.5px, transparent 3px),
+    radial-gradient(circle at 17px 17px, var(--widgetTac) 2.5px, transparent 3px);
+}
