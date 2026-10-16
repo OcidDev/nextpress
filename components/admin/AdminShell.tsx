@@ -174,7 +174,7 @@ export function AdminShell({
         </button>
         <Link className="adminBrand" href="/admin">
           <span className="adminBrandMark" aria-hidden="true">
-            B
+            n
           </span>
           <span>NextPress</span>
         </Link>
