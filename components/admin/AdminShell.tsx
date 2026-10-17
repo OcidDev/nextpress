@@ -23,10 +23,12 @@ import {
   CloseIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
+  ArowUpCircleIcon,
 } from '@/components/ui/icons'
 
 const navigation = [
   { label: 'Dasbor', href: '/admin', icon: HomeIcon },
+  { label: 'Pembaruan', href: '/admin/updates', icon: ArowUpCircleIcon },
   {
     label: 'Artikel',
     href: '/admin/posts',
@@ -115,6 +117,7 @@ export function AdminShell({
   const can = (cap: PrimitiveCapability) => userHasCapability({ role, capabilities }, cap)
   const routeCaps: Record<string, PrimitiveCapability> = {
     '/admin': 'read',
+    '/admin/updates': 'update_core',
     '/admin/posts': 'edit_posts',
     '/admin/media': 'upload_files',
     '/admin/pages': 'edit_others_pages',

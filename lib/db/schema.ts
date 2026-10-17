@@ -18,6 +18,47 @@ import type { AuthorSocial, SEO } from '@/types'
 import { user } from './auth-schema'
 
 /**
+ * One row per requested application update. A job is the durable record an
+ * operator polls: provider deployment states are transient, and a serverless
+ * function cannot keep an in-memory progress object between requests.
+ */
+export const updateJobs = pgTable(
+  'update_jobs',
+  {
+    id: varchar('id', { length: 32 }).primaryKey(),
+    fromVersion: varchar('from_version', { length: 32 }).notNull(),
+    toVersion: varchar('to_version', { length: 32 }).notNull(),
+    tag: varchar('tag', { length: 64 }).notNull(),
+    commit: varchar('commit', { length: 40 }).notNull(),
+    /** "vercel" today; the adapter name that owns the job. */
+    adapter: varchar('adapter', { length: 32 }).notNull(),
+    /**
+     * queued → deploying → ready | failed. `deploying` means the provider has
+     * accepted the deployment; "ready" requires the running version to match.
+     */
+    status: varchar('status', { length: 16 }).notNull().default('queued'),
+    /** Provider deployment id, never a user-supplied URL. */
+    externalId: varchar('external_id', { length: 128 }),
+    externalUrl: text('external_url'),
+    detail: text('detail'),
+    /** Migration list the release expects; recorded for the operator's log. */
+    migrations: jsonb('migrations').$type<{ count: number; upto: string | null }>(),
+    startedBy: text('started_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('update_jobs_created_at_idx').on(table.createdAt),
+    // At most one unfinished job, enforced by the database rather than a
+    // read-then-write check two concurrent clicks could both pass.
+    uniqueIndex('update_jobs_single_active_idx')
+      .on(sql`((true))`)
+      .where(sql`${table.status} in ('queued', 'deploying')`),
+  ],
+)
+
+/**
  * Barrel skema. Tabel inti, konten, plugin, dan tema diekspor ulang di bawah
  * sehingga `drizzle-kit generate` cukup menunjuk satu berkas ini.
  * Kolom memakai snake_case, field TypeScript camelCase.

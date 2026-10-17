@@ -14,3 +14,4 @@ tsconfig.tsbuildinfo
 .local/
 .env*
 !.env.example
+dist

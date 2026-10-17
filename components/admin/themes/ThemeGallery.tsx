@@ -6,7 +6,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { InstalledTheme } from '@/lib/themes/manager'
-import { uploadThemeAction, activateThemeAction } from '@/server/actions/themes'
+import { uploadThemeAction, activateThemeAction, deleteThemeAction } from '@/server/actions/themes'
 
 export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
   const router = useRouter()
@@ -15,6 +15,7 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<string | null>(null)
   const [isActivating, startActivation] = useTransition()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
@@ -56,6 +57,22 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
         router.refresh()
       }
     })
+  }
+
+  async function handleDelete(theme: InstalledTheme) {
+    const confirmed = window.confirm(
+      `Hapus tema "${theme.name}" secara permanen? Paket tema akan dihapus dari instalasi ini. Halaman, menu, dan pengaturan inti situs tidak diubah.`,
+    )
+    if (!confirmed) return
+    setActionError(null)
+    setDeletingId(theme.id)
+    try {
+      const res = await deleteThemeAction(theme.id, theme.hash)
+      if (res.error) setActionError(res.error)
+      else router.refresh()
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -251,7 +268,20 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
                   borderTop: '1px solid #f3f4f6',
                 }}
               >
-                {theme.supportsCustomizer && (
+                {theme.broken && (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      color: '#b91c1c',
+                      alignSelf: 'center',
+                    }}
+                  >
+                    PAKET BERMASALAH
+                  </span>
+                )}
+
+                {theme.supportsCustomizer && !theme.broken && (
                   <Link
                     href={`/admin/site-editor?theme=${theme.id}`}
                     className="button"
@@ -266,14 +296,16 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
                   </Link>
                 )}
 
-                <Link
-                  href={`/preview/theme/${theme.id}`}
-                  className="button"
-                  style={{ background: '#f3f4f6', color: '#1f2937' }}
-                >
-                  Pratinjau
-                </Link>
-                {!theme.isActive && (
+                {!theme.broken && (
+                  <Link
+                    href={`/preview/theme/${theme.id}`}
+                    className="button"
+                    style={{ background: '#f3f4f6', color: '#1f2937' }}
+                  >
+                    Pratinjau
+                  </Link>
+                )}
+                {!theme.isActive && !theme.broken && (
                   <button
                     type="button"
                     className="button"
@@ -287,6 +319,22 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
                     disabled={isActivating}
                   >
                     {isActivating ? 'Mengaktifkan…' : 'Aktifkan'}
+                  </button>
+                )}
+                {!theme.isActive && !theme.isDefault && (
+                  <button
+                    type="button"
+                    className="button"
+                    style={{
+                      backgroundColor: '#fef2f2',
+                      color: '#b91c1c',
+                      border: '1px solid #fecaca',
+                    }}
+                    onClick={() => handleDelete(theme)}
+                    disabled={deletingId === theme.id}
+                    title="Hapus paket tema"
+                  >
+                    {deletingId === theme.id ? 'Menghapus…' : 'Hapus'}
                   </button>
                 )}
               </div>

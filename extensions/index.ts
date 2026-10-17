@@ -15,8 +15,8 @@ import type { ExtensionModule } from '@/lib/extensions/kernel'
  *
  * Menambah ekstensi bawaan:
  *
- * 1. Buat berkas di folder ini yang mengekspor `ExtensionModule` (lihat
- *    `example-reading-time.ts` untuk contoh lengkap beserta catatan sanitasi).
+ * 1. Buat berkas di folder ini yang mengekspor `ExtensionModule`, mengikuti
+ *    bentuk `ExtensionModule` di `lib/extensions/kernel.ts`.
  * 2. Impor dan masukkan ke array di bawah.
  * 3. Uji keluaran halaman: filter konten **wajib** menghasilkan HTML yang lolos
  *    `lib/content/sanitize.ts`, dan tidak semua markup bertahan (atribut di luar

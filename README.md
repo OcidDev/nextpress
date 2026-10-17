@@ -15,6 +15,9 @@ PostgreSQL, Drizzle ORM, and Better Auth.
   customizer.
 - **Plugin engine** — install ZIP plugin packages that contribute sandboxed
   widget areas and page templates.
+- **Updates** — `Dasbor → Pembaruan` checks the official GitHub Release, then
+  deploys it through the configured adapter and verifies the version that is
+  actually serving traffic.
 
 The default theme is Twenty Twenty-Four.
 
@@ -48,6 +51,13 @@ Install and manage packages from `/admin/appearance` (themes) and
 `lib/themes/package.ts` and `lib/plugins/manifest.ts`. A newly installed package
 starts inactive so its widget placements can be arranged before it goes live.
 
+Inactive themes can be deleted from the gallery. The active theme, the bundled
+recovery theme, and themes still used by a page template cannot be deleted; the
+gallery explains which pages block the removal. Deleting a theme removes only
+its package and its customizer settings. Plugins follow the same rule: disable
+the plugin first, then remove any widget placements and page templates that
+still reference it.
+
 Widget code runs inside a sandboxed iframe. Plugin JavaScript cannot reach the
 host page or the server.
 
@@ -68,6 +78,20 @@ pnpm plugin:pack <source-dir> <output.zip>
 `theme:pack` rebuilds `lib/themes/bundled.generated.json` from the theme folders
 under `examples/themes`. It refuses to run when there are no source folders,
 because writing an empty bundle would remove the default theme.
+
+## Updates
+
+`Dasbor → Pembaruan` is available to administrators. It reads the newest stable
+release from `OcidDev/nextpress` (configurable through `NEXTPRESS_RELEASE_OWNER`
+and `NEXTPRESS_RELEASE_REPOSITORY`), caches the answer for 15 minutes, and
+explains what is missing when no deployment adapter is configured.
+
+An update never runs from the web process: the browser sends only the release
+tag, the server re-validates the manifest, and the deployment adapter asks the
+hosting provider to build that tag and commit. A job is marked done only when
+`GET /api/version` on the public origin returns the target version. See
+`docs/release-contract.md` for what a release may contain and
+`docs/deployment/vercel.md` for the Vercel setup.
 
 ## Validation and production build
 
@@ -123,6 +147,12 @@ pnpm db:restore /path/to/backup.dump
 `Pengaturan → Menu`, `Footer`, and `Tautan sosial` manage site-owned links independently
 of the active theme. Their placement and visual treatment follow the theme. Set the
 site favicon in `Pengaturan → Umum`; clearing it restores the bundled icon.
+
+Identity, navigation, footer links, social links, and reading choices (front page
+and posts per page) are core settings, not theme configuration. The appearance
+editor saves theme chrome (header, sections, widgets, cards); its preview of those
+core fields is read from the settings option, so saving or restoring a draft never
+changes the site name, menu, footer, or homepage routing.
 
 New pages start as drafts. Existing pages remain published when migration `0001`
 is applied. Draft pages are excluded from public routes, the sitemap, and homepage

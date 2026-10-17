@@ -155,7 +155,7 @@ export async function listCategoryTree(): Promise<CategoryNode[]> {
 }
 
 /**
- * Menyemai kategori baku secara idempotent. Jalur tulis saja: migrasi 0009 sudah
+ * Menyemai kategori baku secara idempotent. Jalur tulis saja: migrasi awal sudah
  * menyemai saat pemasangan/upgrade, fungsi ini hanya memperbaiki instalasi yang
  * kehilangan baris tersebut. Jangan memanggilnya dari jalur baca.
  */

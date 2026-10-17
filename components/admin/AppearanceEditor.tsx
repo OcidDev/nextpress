@@ -20,22 +20,18 @@ import {
   FooterFields,
   HeaderFields,
   HomeFields,
-  IdentityFields,
-  MenuFields,
   StyleFields,
   WidgetArea,
 } from './appearance/Fields'
 import { EyeIcon, SettingsIcon } from '@/components/ui/icons'
 
 const tabs = [
-  ['identity', 'Identitas'],
   ['style', 'Gaya'],
   ['header', 'Header'],
   ['home', 'Beranda'],
   ['article', 'Artikel'],
   ['sidebar', 'Sidebar'],
   ['footer', 'Footer'],
-  ['menu', 'Menu'],
 ] as const
 type Tab = (typeof tabs)[number][0]
 type Operation = 'save' | 'apply' | 'discard' | 'restore'
@@ -52,7 +48,7 @@ export function AppearanceEditor({
   const [config, setConfig] = useState(editor.draft.config)
   const [revision, setRevision] = useState(editor.draft.revision)
   const [savedJson, setSavedJson] = useState(JSON.stringify(editor.draft.config))
-  const [tab, setTab] = useState<Tab>('identity')
+  const [tab, setTab] = useState<Tab>('style')
   const [mobileView, setMobileView] = useState<'settings' | 'preview'>('settings')
   const [previewWidth, setPreviewWidth] = useState(1440)
   const [previewAvailableWidth, setPreviewAvailableWidth] = useState(500)
@@ -186,7 +182,7 @@ export function AppearanceEditor({
   function choosePreset(preset: Appearance['preset']) {
     if (
       !window.confirm(
-        'Preset akan mengganti susunan bagian, widget, dan gaya rancangan. Identitas dan menu tetap dipakai. Lanjutkan?',
+        'Preset akan mengganti susunan bagian, widget, dan gaya rancangan. Identitas, menu, dan tautan situs tetap dipakai. Lanjutkan?',
       )
     )
       return
@@ -195,10 +191,6 @@ export function AppearanceEditor({
 
   function fieldContent() {
     switch (tab) {
-      case 'identity':
-        return (
-          <IdentityFields site={config.site} onChange={(site) => setConfig({ ...config, site })} />
-        )
       case 'style':
         return <StyleFields config={config} onChange={setConfig} />
       case 'header':
@@ -240,14 +232,6 @@ export function AppearanceEditor({
         )
       case 'footer':
         return <FooterFields config={config} onChange={setConfig} choices={editor.choices} />
-      case 'menu':
-        return (
-          <MenuFields
-            site={config.site}
-            choices={editor.choices}
-            onChange={(site) => setConfig({ ...config, site })}
-          />
-        )
     }
   }
 
@@ -468,6 +452,10 @@ export function AppearanceEditor({
               </div>
             </div>
           </details>
+          <p className="appearanceHint">
+            Nama situs, logo, favicon, menu, kolom footer, dan tautan sosial diatur di{' '}
+            <Link href="/admin/settings/general">Pengaturan</Link>, bukan di rancangan tema.
+          </p>
           <div className="appearanceTabs" role="tablist" aria-label="Bagian tampilan">
             {tabs.map(([id, label], index) => (
               <button

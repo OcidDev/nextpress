@@ -284,6 +284,20 @@ export function appearanceSite(site: SiteSettings): AppearanceSite {
   return appearanceSiteSchema.parse(site)
 }
 
+/**
+ * The part of an appearance config that a revision owns. Core settings keep
+ * identity, navigation, footer links, social links, and reading routing; a draft
+ * or a restore must not carry its own copy of them, neither from the browser nor
+ * from an older revision.
+ */
+export function appearanceChrome(current: Appearance, config: Appearance): Appearance {
+  return {
+    ...config,
+    site: current.site,
+    home: { ...config.home, mode: current.home.mode, pageId: current.home.pageId },
+  }
+}
+
 function newItemId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`
 }

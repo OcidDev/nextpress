@@ -12,6 +12,7 @@ import {
 import { renderBlockTree } from '@/lib/blocks/render'
 import { blockRegistry } from '@/lib/blocks/registry'
 import type { BlockContext } from '@/lib/blocks/context'
+import { appearanceSite } from '@/lib/content/appearance'
 import { getAppearance } from '@/lib/db/queries/appearance'
 import { getSettings } from '@/lib/db/queries/settings'
 import { NavigationMenu } from '@/components/navigation/NavigationMenu'
@@ -60,13 +61,16 @@ export async function ThemePage({
             : customization.active,
         )
       : undefined
+  // Identity, navigation, and social links come from the core "site" option. The
+  // appearance projection already mirrors it; building it here keeps the renderer
+  // independent of how a revision was stored.
+  const site = appearanceSite(settings)
   const blockContext: BlockContext = {
-    site: appearance.site,
+    site,
     appearance,
     ...context,
     routeContent: children,
   }
-  const legacyAppearance = theme.manifest.capabilities.includes('appearance-editor')
   const { content, report } = await renderBlockTree(
     (selectedPageTemplate?.template ?? theme.templates[template]!).blocks,
     {
@@ -91,11 +95,6 @@ export async function ThemePage({
       data-theme-package={theme.manifest.id}
       data-theme-version={theme.hash}
       data-theme-template={selectedPageTemplate?.name ?? template}
-      data-width={legacyAppearance ? appearance.style.width : undefined}
-      data-font-size={legacyAppearance ? appearance.style.fontSize : undefined}
-      data-design={legacyAppearance ? appearance.style.design : undefined}
-      data-navigation-default={legacyAppearance ? appearance.header.navigationDefault : undefined}
-      data-header-sticky={legacyAppearance ? appearance.header.sticky : undefined}
     >
       <link rel="stylesheet" href={themeAssetUrl(theme.manifest.id, theme.hash, 'style.css')} />
       <a href="#main-content" className="skipLink">
@@ -104,7 +103,7 @@ export async function ThemePage({
       {!context?.preview && <ViewTracker enabled={settings.viewsEnabled} site />}
       {content}
       <Drawer>
-        <NavigationMenu label="Menu drawer" site={appearance.site} />
+        <NavigationMenu label="Menu drawer" site={site} />
       </Drawer>
       <SearchModal />
       {!context?.preview && (

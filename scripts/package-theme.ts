@@ -5,9 +5,8 @@ import { validateThemePackage, type ThemeFiles } from '../lib/themes/package'
 
 // Tema bawaan dibangun dari folder di examples/themes.
 //
-// Daftar ini sengaja eksplisit, bukan "semua folder yang ada": examples/themes
-// juga memuat tema contoh (mis. `starter`) yang hanya dipakai pratinjau template
-// dan tidak boleh ikut terpasang sebagai tema di galeri admin.
+// Daftar ini sengaja eksplisit, bukan "semua folder yang ada", supaya tema baru
+// hanya ikut dibundel setelah ditinjau dan ditambahkan di sini.
 const ids = ['core-default']
 
 const source = path.resolve('examples/themes')
