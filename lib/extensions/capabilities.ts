@@ -24,6 +24,7 @@ export const capabilities = [
   'switch_themes',
   'delete_themes',
   'edit_theme_options',
+  'update_core',
 ] as const
 
 export type Capability = (typeof capabilities)[number]

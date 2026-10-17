@@ -32,6 +32,7 @@ export const primitiveCapabilities = [
   'switch_themes',
   'delete_themes',
   'edit_theme_options',
+  'update_core',
 ] as const
 export type PrimitiveCapability = (typeof primitiveCapabilities)[number]
 export const roleNameSchema = z
@@ -80,6 +81,7 @@ export function initialRoles(): z.infer<typeof roleDefinitionsSchema> {
         'switch_themes',
         'delete_themes',
         'edit_theme_options',
+        'update_core',
       ].includes(cap),
   )
   return {
