@@ -59,10 +59,13 @@ jobs:
 
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm build
 
+      # The database must exist before the build: static export of pages such as
+      # /search reads cms_options, so building against an empty database fails.
       - run: pnpm db:migrate
       - run: pnpm db:check
+
+      - run: pnpm build
 
       - name: Build release asset and manifest
         run: node scripts/package-release.mjs "${GITHUB_REF_NAME}" dist
