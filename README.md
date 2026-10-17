@@ -44,6 +44,11 @@ Open http://localhost:3000. Sign in at `/admin/login` using the administrator
 account you created. There are no default credentials. Redis and analytics
 integrations are optional; see `.env.example` for their settings.
 
+For a new installation on your own server, including database creation, a
+systemd unit, the reverse proxy, and the backup/update steps, follow
+[`docs/deployment/self-hosted.md`](docs/deployment/self-hosted.md). Vercel
+deployments are covered in [`docs/deployment/vercel.md`](docs/deployment/vercel.md).
+
 ## Themes and plugins
 
 Install and manage packages from `/admin/appearance` (themes) and
