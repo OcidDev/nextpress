@@ -1,8 +1,9 @@
 # Rencana pembersihan ekstensi dan pembaruan NextPress
 
 Tanggal: 17 Oktober 2026.
-Status: direncanakan; implementasi belum dimulai.
-Dasar: commit `39e61b5` (pengaturan situs dan siklus editorial).
+Status: Tahap 1 dan Tahap 2 selesai; Tahap 3–5 belum dimulai.
+Dasar: commit `39e61b5` (pengaturan situs dan siklus editorial), dilanjutkan
+`86ae38b` (dokumentasi pembersihan tema dan peta jalan pembaruan).
 
 ## Tujuan
 
@@ -15,15 +16,16 @@ Dasar: commit `39e61b5` (pengaturan situs dan siklus editorial).
 
 | Bagian               | Kondisi saat ini                                                                                                                       | Tindak lanjut                                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Tema aktif           | Menggunakan paket ZIP, registry blok, dan customizer paket. Tema bawaan adalah `core-default` / Twenty Twenty-Four.                    | Pertahankan mesin paket dan satu tema pemulihan bawaan.                                                               |
-| Hapus tema           | Belum ada operasi hapus di manager maupun server action.                                                                               | Tambahkan penyimpanan, pemeriksaan referensi, dan UI.                                                                 |
-| Hapus plugin         | Sudah ada di `PluginManager`, `uninstallPlugin`, dan `uninstallPluginData`. Plugin aktif dan referensi tampilan membatasi penghapusan. | Uji serta lengkapi alurnya, tanpa membuat mekanisme kedua.                                                            |
-| Preview tema starter | `/preview/template/[name]` masih membaca `examples/themes/starter` melalui `lib/themes/starter-files.ts`.                              | Kandidat penghapusan setelah memastikan tidak ada pemakai yang perlu dipindahkan.                                     |
-| Tampilan lama        | Cabang kapabilitas `appearance-editor` masih ada pada renderer, site editor, dan penyimpanan tampilan.                                 | Petakan pemakai paket dan data sebelum menghapus cabang lama.                                                         |
-| Alias tema           | `twentytwentyfour` masih dinormalisasi ke `core-default`.                                                                              | Periksa data tersimpan dan siapkan migrasi jika alias dilepas.                                                        |
-| Ekstensi contoh      | `extensions/example-reading-time.ts` masih ada, tetapi registry ekstensi bawaan kosong.                                                | Pisahkan contoh pengembangan dari runtime; hapus contoh jika tidak lagi diperlukan.                                   |
-| SEO plugin           | Registry runtime dan panel kosong, tetapi kontrak ekstensi masih ada.                                                                  | Bedakan API ekstensi yang disengaja dari sisa plugin tertentu; jangan menganggap seluruh API ini sebagai plugin lama. |
-| Sumber update        | Versi aplikasi `0.1.0`; belum ada Git remote pada checkout ini maupun updater aplikasi.                                                | Tetapkan repositori sumber dan kontrak rilis terlebih dahulu.                                                         |
+| Tema aktif           | Paket ZIP, registry blok, dan customizer paket. Tema bawaan `core-default` / Twenty Twenty-Four.                                        | Selesai: mesin paket dan satu tema pemulihan bawaan dipertahankan.                                                    |
+| Hapus tema           | `deleteThemePackage` + `deleteThemeAction` + tombol galeri, capability `delete_themes`, lock `cms-theme-activation`.                   | Selesai: tema aktif, tema bawaan, dan tema yang dipakai template halaman ditolak dengan pesan yang bisa ditindaklanjuti. |
+| Hapus plugin         | `uninstallPluginData` menolak plugin aktif, referensi tampilan, dan template halaman (`plugin:<id>:…`) termasuk draf/Sampah.           | Selesai; memperluas alur yang sudah ada, bukan membuat mekanisme kedua.                                               |
+| Preview tema starter | `/preview/template/[name]`, `lib/themes/starter-files.ts`, dan `examples/themes/starter` sudah dihapus.                                 | Selesai.                                                                                                              |
+| Tampilan lama        | Cabang kapabilitas `appearance-editor` sudah dihapus dari site editor, galeri, dan manajer tema.                                        | Selesai.                                                                                                              |
+| Data inti vs. tema   | `site` (identitas, menu, footer, sosial, bacaan) hanya di Pengaturan; revisi tampilan hanya menyimpan chrome tema.                       | Selesai: `appearance.site`/`home.mode` diproyeksikan dari inti saat dibaca; draf/pemulihan tidak dapat menimpanya.     |
+| Alias tema           | `twentytwentyfour` dinormalisasi ke `core-default` saat dibaca dan ditolak saat diunggah.                                              | Dipertahankan: memetakan data lama tanpa menulis ulang database.                                                      |
+| Ekstensi contoh      | `extensions/example-reading-time.ts` sudah dihapus; registry bawaan kosong.                                                             | Selesai.                                                                                                              |
+| SEO plugin           | Registry runtime dan panel kosong, tetapi kontrak ekstensi masih ada.                                                                  | Dipertahankan sebagai API ekstensi; bukan sisa plugin tertentu.                                                       |
+| Sumber update        | Repositori `OcidDev/nextpress` (privat, branch `main`) ada; belum ada tag, Release, atau updater aplikasi.                              | Tahap 3: tetapkan kontrak rilis sebelum halaman pembaruan.                                                            |
 
 Temuan ini belum merupakan audit lengkap database. Paket yang sudah tidak ada di
 source masih mungkin tersimpan dalam database. Tema bawaan yang sedang digunakan
