@@ -1,7 +1,7 @@
 # Rencana pembersihan ekstensi dan pembaruan NextPress
 
 Tanggal: 17 Oktober 2026.
-Status: Tahap 1 dan Tahap 2 selesai; Tahap 3–5 belum dimulai.
+Status: Tahap 1–3 selesai; Tahap 4–5 belum dimulai.
 Dasar: commit `39e61b5` (pengaturan situs dan siklus editorial), dilanjutkan
 `86ae38b` (dokumentasi pembersihan tema dan peta jalan pembaruan).
 
@@ -25,7 +25,7 @@ Dasar: commit `39e61b5` (pengaturan situs dan siklus editorial), dilanjutkan
 | Alias tema           | `twentytwentyfour` dinormalisasi ke `core-default` saat dibaca dan ditolak saat diunggah.                                              | Dipertahankan: memetakan data lama tanpa menulis ulang database.                                                      |
 | Ekstensi contoh      | `extensions/example-reading-time.ts` sudah dihapus; registry bawaan kosong.                                                             | Selesai.                                                                                                              |
 | SEO plugin           | Registry runtime dan panel kosong, tetapi kontrak ekstensi masih ada.                                                                  | Dipertahankan sebagai API ekstensi; bukan sisa plugin tertentu.                                                       |
-| Sumber update        | Repositori `OcidDev/nextpress` (privat, branch `main`) ada; belum ada tag, Release, atau updater aplikasi.                              | Tahap 3: tetapkan kontrak rilis sebelum halaman pembaruan.                                                            |
+| Sumber update        | Repositori `OcidDev/nextpress` kini publik. Kontrak rilis, workflow, dan pemeriksa manifest tersedia; belum ada tag atau Release.         | Selesai: lihat `docs/release-contract.md`. Tag pertama membuat rilis yang bisa dibaca halaman pembaruan.              |
 
 Temuan ini belum merupakan audit lengkap database. Paket yang sudah tidak ada di
 source masih mungkin tersimpan dalam database. Tema bawaan yang sedang digunakan
@@ -94,6 +94,14 @@ sedangkan paket aktif atau masih digunakan ditolak dengan alasan yang bisa ditin
   kredensial, backup database, data lokal, atau hasil pengujian privat.
 - Dokumentasikan pemisahan core NextPress dari data serta kustomisasi instalasi,
   supaya pembaruan tidak menimpa perubahan pengguna tanpa pemberitahuan.
+
+Status: selesai. `docs/release-contract.md` memuat kontrak dan tabel pemisahan
+core/data; `.github/workflows/nextpress-release.yml` menguji lalu membangun aset;
+`scripts/package-release.mjs` (`pnpm release:pack`) menghasilkan arsip
+deterministik dan `nextpress-release.json`; `lib/updates/release.ts` memvalidasi
+manifest yang diunduh. Konfigurasi owner/repositori/token ada di `.env.example`.
+
+Selesai ketika kontrak dan workflow tersedia serta paket uji lolos validasi.
 
 ## Tahap 4 — Halaman Pembaruan NextPress
 
