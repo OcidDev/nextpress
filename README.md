@@ -15,6 +15,9 @@ PostgreSQL, Drizzle ORM, and Better Auth.
   customizer.
 - **Plugin engine** — install ZIP plugin packages that contribute sandboxed
   widget areas and page templates.
+- **Updates** — `Dasbor → Pembaruan` checks the official GitHub Release, then
+  deploys it through the configured adapter and verifies the version that is
+  actually serving traffic.
 
 The default theme is Twenty Twenty-Four.
 
@@ -75,6 +78,20 @@ pnpm plugin:pack <source-dir> <output.zip>
 `theme:pack` rebuilds `lib/themes/bundled.generated.json` from the theme folders
 under `examples/themes`. It refuses to run when there are no source folders,
 because writing an empty bundle would remove the default theme.
+
+## Updates
+
+`Dasbor → Pembaruan` is available to administrators. It reads the newest stable
+release from `OcidDev/nextpress` (configurable through `NEXTPRESS_RELEASE_OWNER`
+and `NEXTPRESS_RELEASE_REPOSITORY`), caches the answer for 15 minutes, and
+explains what is missing when no deployment adapter is configured.
+
+An update never runs from the web process: the browser sends only the release
+tag, the server re-validates the manifest, and the deployment adapter asks the
+hosting provider to build that tag and commit. A job is marked done only when
+`GET /api/version` on the public origin returns the target version. See
+`docs/release-contract.md` for what a release may contain and
+`docs/deployment/vercel.md` for the Vercel setup.
 
 ## Validation and production build
 

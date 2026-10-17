@@ -1,7 +1,8 @@
 # Rencana pembersihan ekstensi dan pembaruan NextPress
 
 Tanggal: 17 Oktober 2026.
-Status: Tahap 1–3 selesai; Tahap 4–5 belum dimulai.
+Status: Tahap 1–4 selesai; Tahap 5 (adapter Vercel) selesai; adapter server/VPS
+belum dibuat.
 Dasar: commit `39e61b5` (pengaturan situs dan siklus editorial), dilanjutkan
 `86ae38b` (dokumentasi pembersihan tema dan peta jalan pembaruan).
 
@@ -116,6 +117,13 @@ Selesai ketika kontrak dan workflow tersedia serta paket uji lolos validasi.
   tidak menerima URL unduhan atau perintah shell bebas dari browser.
 - Catat pekerjaan pembaruan secara persisten dan cegah pekerjaan ganda. Tampilkan
   tahap persiapan, backup, pemasangan, migrasi, pemeriksaan kesehatan, dan hasil.
+
+Status: selesai untuk adapter Vercel. `update_core` hanya untuk administrator
+(dengan backfill migrasi `0003`); `update_jobs` mencatat pekerjaan dan indeks unik
+parsial menolak dua pekerjaan aktif. Manifest divalidasi ulang di server; browser
+hanya mengirim tag. Migrasi dijalankan pada build produksi Vercel
+(`pnpm vercel-build`), lalu versi yang benar-benar melayani diverifikasi melalui
+`GET /api/version`. Backup tetap tindakan operator dan dijelaskan sebelum update.
 
 ## Tahap 5 — Pemasangan sesuai lingkungan hosting
 

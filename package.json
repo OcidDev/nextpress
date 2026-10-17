@@ -21,7 +21,8 @@
     "admin:reset": "tsx scripts/reset-admin-password.ts",
     "plugin:pack": "node scripts/package-plugin.mjs",
     "theme:pack": "tsx scripts/package-theme.ts",
-    "release:pack": "node scripts/package-release.mjs"
+    "release:pack": "node scripts/package-release.mjs",
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.4",
