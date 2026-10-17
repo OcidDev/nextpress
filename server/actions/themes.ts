@@ -3,7 +3,12 @@
 import { MAX_THEME_ZIP_BYTES, THEME_ZIP_SIZE_MESSAGE } from '@/lib/themes/limits'
 import { revalidatePath } from 'next/cache'
 import { requireCapability } from '@/lib/admin'
-import { installThemeFromZip, setActiveThemeId } from '@/lib/themes/manager'
+import {
+  ThemeDeletionError,
+  deleteThemePackage,
+  installThemeFromZip,
+  setActiveThemeId,
+} from '@/lib/themes/manager'
 
 export interface ThemeActionResult {
   success?: boolean
@@ -58,6 +63,26 @@ export async function activateThemeAction(themeId: string): Promise<ThemeActionR
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Gagal mengaktifkan tema.',
+    }
+  }
+}
+
+export async function deleteThemeAction(
+  themeId: string,
+  hash: string,
+): Promise<ThemeActionResult> {
+  await requireCapability('delete_themes')
+
+  try {
+    await deleteThemePackage(themeId, hash)
+    revalidatePath('/admin/appearance', 'layout')
+    return { success: true, message: 'Tema dihapus.' }
+  } catch (error) {
+    return {
+      error:
+        error instanceof ThemeDeletionError
+          ? error.message
+          : 'Gagal menghapus tema. Muat ulang halaman lalu coba lagi.',
     }
   }
 }

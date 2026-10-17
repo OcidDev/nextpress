@@ -22,6 +22,7 @@ export const capabilities = [
   'delete_plugins',
   'install_themes',
   'switch_themes',
+  'delete_themes',
   'edit_theme_options',
 ] as const
 
