@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { requireCapability } from '@/lib/admin'
 import { postScope, mediaScope } from './cms-scope'
@@ -79,7 +79,7 @@ function paging(total: number, requested: number) {
 export async function listedPosts(search: ListSearch) {
   const session = await requireCapability('edit_posts')
   const ownership = postScope(session.user)
-  const params = listParameters(search, ['draft', 'pending', 'published'])
+  const params = listParameters(search, ['draft', 'pending', 'published', 'trash'])
   const { sort, dir } = sortParameters(
     search,
     ['title', 'author', 'status', 'comments', 'updatedAt'] as const,
@@ -95,7 +95,7 @@ export async function listedPosts(search: ListSearch) {
     params.q
       ? or(ilike(posts.title, pattern), ilike(posts.slug, pattern), ilike(posts.excerpt, pattern))
       : undefined,
-    params.status ? eq(posts.status, params.status) : undefined,
+    params.status ? eq(posts.status, params.status) : ne(posts.status, 'trash'),
     params.tag
       ? sql`exists (select 1 from ${postTags} where ${postTags.postId}=${posts.id} and ${postTags.tag}=${params.tag})`
       : undefined,
@@ -168,7 +168,7 @@ export async function listedPosts(search: ListSearch) {
 
 export async function listedPages(search: ListSearch) {
   await requireCapability('edit_others_pages')
-  const params = listParameters(search)
+  const params = listParameters(search, ['draft', 'published', 'trash'])
   const { sort, dir } = sortParameters(
     search,
     ['title', 'updatedAt', 'menuOrder'] as const,
@@ -179,7 +179,10 @@ export async function listedPages(search: ListSearch) {
   params.dir = dir
 
   const pattern = searchPattern(params.q)
-  const where = params.q ? or(ilike(pages.title, pattern), ilike(pages.slug, pattern)) : undefined
+  const where = and(
+    params.q ? or(ilike(pages.title, pattern), ilike(pages.slug, pattern)) : undefined,
+    params.status ? eq(pages.status, params.status) : ne(pages.status, 'trash'),
+  )
   const db = getDb()
   const [total] = await db.select({ value: count() }).from(pages).where(where)
   const pagination = paging(total!.value, params.page)
@@ -205,6 +208,7 @@ export async function listedPages(search: ListSearch) {
       id: pages.id,
       title: pages.title,
       slug: pages.slug,
+      status: pages.status,
       updatedAt: pages.updatedAt,
       menuOrder: pages.menuOrder,
       parentTitle: parent.title,

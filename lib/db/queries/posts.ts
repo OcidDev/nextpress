@@ -293,7 +293,14 @@ export async function getAuthor(slug: string) {
 }
 export async function getPage(slug: string) {
   if (!hasDatabase()) return null
-  return (await getDb().select().from(pages).where(eq(pages.slug, slug)))[0] ?? null
+  return (
+    (
+      await getDb()
+        .select()
+        .from(pages)
+        .where(and(eq(pages.slug, slug), eq(pages.status, 'published')))
+    )[0] ?? null
+  )
 }
 export async function getArchiveYears() {
   if (!hasDatabase()) return []

@@ -65,6 +65,7 @@ export const pageInput = z
     title: z.string().trim().min(1).max(250),
     slug: z.string().trim().max(160).default(''),
     slugMode: z.enum(['auto', 'manual']).default('manual'),
+    status: z.enum(['draft', 'published']).default('draft'),
     parentId: z.string().max(32).optional(),
     menuOrder: z
       .string()

@@ -5,7 +5,15 @@ import { getDb, hasDatabase } from '@/lib/db'
 import { authors, categories, pages, postCategories, posts } from '@/lib/db/schema'
 export async function getPublicPageById(id: string) {
   if (!hasDatabase() || !id) return null
-  return (await getDb().select().from(pages).where(eq(pages.id, id)).limit(1))[0] ?? null
+  return (
+    (
+      await getDb()
+        .select()
+        .from(pages)
+        .where(and(eq(pages.id, id), eq(pages.status, 'published')))
+        .limit(1)
+    )[0] ?? null
+  )
 }
 export async function getPublicAuthorById(id: string) {
   if (!hasDatabase() || !id) return null
@@ -59,7 +67,8 @@ export async function getPublicSitemapEntries() {
       .where(and(eq(posts.status, 'published'), lte(posts.publishedAt, new Date()))),
     db
       .select({ id: pages.id, slug: pages.slug, seo: pages.seo, updatedAt: pages.updatedAt })
-      .from(pages),
+      .from(pages)
+      .where(eq(pages.status, 'published')),
     db
       .select({ slug: authors.slug })
       .from(authors)

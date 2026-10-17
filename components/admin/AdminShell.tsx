@@ -77,6 +77,9 @@ const navigation = [
     icon: SettingsIcon,
     children: [
       { label: 'Umum', href: '/admin/settings/general' },
+      { label: 'Menu', href: '/admin/settings/menus' },
+      { label: 'Footer', href: '/admin/settings/footer' },
+      { label: 'Tautan sosial', href: '/admin/settings/social' },
       { label: 'Menulis', href: '/admin/settings/writing' },
       { label: 'Membaca', href: '/admin/settings/reading' },
       { label: 'Permalink', href: '/admin/settings/permalinks' },
@@ -288,7 +291,7 @@ export function AdminShell({
                     : pathname.startsWith('/admin/comments')
                       ? 'Komentar baru menunggu persetujuan. Ubah status untuk menyetujui atau menandai spam.'
                       : pathname.startsWith('/admin/pages')
-                        ? 'Halaman yang disimpan langsung tersedia melalui slug-nya. Tambahkan tautan halaman ke navigasi situs.'
+                        ? 'Simpan halaman sebagai draft untuk preview privat, lalu terbitkan. Tambahkan tautan halaman terbit melalui Pengaturan → Menu.'
                         : pathname.startsWith('/admin/profile')
                           ? 'Atur nama, foto profil, dan kredensial akun Anda.'
                           : pathname.startsWith('/admin/users')

@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { requireCapability } from '@/lib/admin'
 import { mediaScope } from './cms-scope'
 import { getDb } from '@/lib/db'
-import { media, posts, pages, options, user, authors } from '@/lib/db/schema'
+import { media, posts, pages, options, user, authors, contentRevisions } from '@/lib/db/schema'
 import { content } from '@/lib/db/core-schema'
 import { newId } from './admin-content'
 import { MEDIA_UPLOAD_MAX_BYTES, MEDIA_UPLOAD_MAX_MB } from '@/lib/media-limits'
@@ -108,6 +108,11 @@ export async function deleteMediaData(id: string) {
         ),
       )
       .limit(1)
+    const usedRevisions = await tx
+      .select({ id: contentRevisions.id })
+      .from(contentRevisions)
+      .where(sql`strpos(${contentRevisions.snapshot}::text, ${path}) > 0`)
+      .limit(1)
     const usedSettings = await tx
       .select({ id: options.name })
       .from(options)
@@ -129,6 +134,7 @@ export async function deleteMediaData(id: string) {
       .where(sql`strpos(${content.content}, ${path}) > 0`)
       .limit(1)
     if (
+      usedRevisions.length ||
       usedPosts.length ||
       usedPages.length ||
       usedSettings.length ||

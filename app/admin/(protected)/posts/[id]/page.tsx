@@ -9,7 +9,7 @@ export default async function EditPost({
   searchParams: Promise<{ saved?: string }>
 }) {
   const post = await adminPost((await params).id)
-  if (!post) notFound()
+  if (!post || post.status === 'trash') notFound()
   return (
     <>
       <h1>Edit artikel</h1>

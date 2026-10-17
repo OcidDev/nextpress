@@ -13,6 +13,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
     { value: 'draft', label: 'Draft' },
     { value: 'pending', label: 'Menunggu review' },
     { value: 'published', label: 'Terbit' },
+    { value: 'trash', label: 'Sampah' },
   ]
   return (
     <>

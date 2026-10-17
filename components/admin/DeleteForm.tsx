@@ -6,9 +6,11 @@ export function DeleteForm({
   id,
   action,
   label = 'Hapus',
+  confirmation = 'Hapus data ini secara permanen?',
 }: {
   id: string
   action: (state: ActionState, data: FormData) => Promise<ActionState>
+  confirmation?: string
   label?: string
 }) {
   const [state, formAction, pending] = useActionState(action, {})
@@ -16,7 +18,7 @@ export function DeleteForm({
     <form
       action={formAction}
       onSubmit={(event) => {
-        if (!window.confirm('Hapus data ini secara permanen?')) event.preventDefault()
+        if (!window.confirm(confirmation)) event.preventDefault()
       }}
     >
       <input type="hidden" name="id" value={id} />

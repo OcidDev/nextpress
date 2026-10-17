@@ -3,6 +3,7 @@
 import { Fragment, useActionState, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { bulkPostStatus, deletePost, quickEditPost } from '@/server/actions/content'
+import { TrashActions } from './TrashActions'
 import { DeleteForm } from './DeleteForm'
 import { formatDate } from '@/lib/utils'
 import type { listedPosts } from '@/lib/db/queries/admin-list'
@@ -173,7 +174,7 @@ export function PostsTable({
       /* Optional preference. */
     }
   }
-  const editableRows = rows.filter((post) => post.canEdit)
+  const editableRows = rows.filter((post) => post.canEdit && post.status !== 'trash')
   const [selected, setSelected] = useState<string[]>([])
   const selectedVersions = useRef(new Map<string, string>())
   function selectPost(post: Post, checked: boolean) {
@@ -316,13 +317,17 @@ export function PostsTable({
                     <input
                       type="checkbox"
                       aria-label={`Pilih ${post.title}`}
-                      disabled={busy || !post.canEdit}
+                      disabled={busy || !post.canEdit || post.status === 'trash'}
                       checked={selected.includes(post.id)}
                       onChange={(event) => selectPost(post, event.target.checked)}
                     />
                   </td>
                   <td>
-                    <Link href={`/admin/posts/${post.id}`}>{post.title}</Link>
+                    {post.status === 'trash' ? (
+                      post.title
+                    ) : (
+                      <Link href={`/admin/posts/${post.id}`}>{post.title}</Link>
+                    )}
                     <small className="adminListSecondary">/{post.slug}</small>
                   </td>
                   {visible.includes('author') && <td>{post.authorName}</td>}
@@ -335,7 +340,9 @@ export function PostsTable({
                           ? 'Terbit'
                           : post.status === 'pending'
                             ? 'Menunggu review'
-                            : 'Draft'}
+                            : post.status === 'trash'
+                              ? 'Sampah'
+                              : 'Draft'}
                       </span>
                     </td>
                   )}
@@ -345,22 +352,37 @@ export function PostsTable({
                   )}
                   <td>
                     <div className="adminRowActions">
-                      {post.canEdit && <Link href={`/admin/posts/${post.id}`}>Edit</Link>}
-                      <button
-                        id={`post-quick-trigger-${post.id}`}
-                        type="button"
-                        disabled={busy || !post.canEdit}
-                        aria-expanded={editing === post.id}
-                        aria-controls={editing === post.id ? `post-quick-${post.id}` : undefined}
-                        onClick={() => {
-                          setEditing(editing === post.id ? null : post.id)
-                          setNotice('')
-                        }}
-                      >
-                        Edit Cepat
-                      </button>
-                      <Link href={`/admin/posts/${post.id}/preview`}>Preview</Link>
-                      {post.canDelete && <DeleteForm id={post.id} action={deletePost} />}
+                      {post.status === 'trash' ? (
+                        post.canDelete && <TrashActions kind="posts" id={post.id} />
+                      ) : (
+                        <>
+                          {post.canEdit && <Link href={`/admin/posts/${post.id}`}>Edit</Link>}
+                          <button
+                            id={`post-quick-trigger-${post.id}`}
+                            type="button"
+                            disabled={busy || !post.canEdit || post.status === 'trash'}
+                            aria-expanded={editing === post.id}
+                            aria-controls={
+                              editing === post.id ? `post-quick-${post.id}` : undefined
+                            }
+                            onClick={() => {
+                              setEditing(editing === post.id ? null : post.id)
+                              setNotice('')
+                            }}
+                          >
+                            Edit Cepat
+                          </button>
+                          <Link href={`/admin/posts/${post.id}/preview`}>Preview</Link>
+                          {post.canDelete && (
+                            <DeleteForm
+                              id={post.id}
+                              action={deletePost}
+                              label="Ke Sampah"
+                              confirmation="Pindahkan artikel ini ke Sampah? Artikel dapat dipulihkan sebagai draft."
+                            />
+                          )}
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

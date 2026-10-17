@@ -93,7 +93,7 @@ async function validateReferences(tx: AppearanceTransaction, config: Appearance)
       ? await tx
           .select({ id: pages.id })
           .from(pages)
-          .where(eq(pages.id, config.home.pageId))
+          .where(and(eq(pages.id, config.home.pageId), eq(pages.status, 'published')))
           .for('share')
       : []
     if (!page) throw new AppearanceValidationError('Pilih halaman beranda yang masih tersedia.')
@@ -228,6 +228,7 @@ export async function getAppearanceEditor(): Promise<AppearanceEditorData> {
       db
         .select({ id: pages.id, title: pages.title, slug: pages.slug })
         .from(pages)
+        .where(eq(pages.status, 'published'))
         .orderBy(pages.title),
       db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(authors.name),
       db

@@ -53,7 +53,7 @@ export async function legacySourceRow(
     source === 'post'
       ? sql`select to_jsonb(t)-'search_vector' as row from posts t where id=${id}`
       : source === 'page'
-        ? sql`select to_jsonb(t) as row from pages t where id=${id}`
+        ? sql`select case when t.status = 'published' then to_jsonb(t)-'status' else to_jsonb(t) end as row from pages t where id=${id}`
         : sql`select jsonb_build_object('id',t.id,'name',t.name,'mime_type',t.mime_type,
           'size',t.size,'width',t.width,'height',t.height,'alt',t.alt,
           'title',t.title,'caption',t.caption,'description',t.description,

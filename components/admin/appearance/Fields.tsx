@@ -243,7 +243,7 @@ function PluginReferenceFields({
   )
 }
 
-function destinationOptions(choices: AppearanceChoices) {
+function destinationOptions(choices: Pick<AppearanceChoices, 'pages' | 'categories'>) {
   return [
     { value: '', label: 'Pilih halaman atau kategori…' },
     ...choices.pages.map((page) => ({ value: `/${page.slug}`, label: `Halaman: ${page.title}` })),
@@ -262,7 +262,7 @@ export function LinksFields({
 }: {
   links: LinkItem[]
   onChange: (links: LinkItem[]) => void
-  choices: AppearanceChoices
+  choices: Pick<AppearanceChoices, 'pages' | 'categories'>
   label?: string
 }) {
   const id = useId()
@@ -1182,22 +1182,21 @@ export function FooterFields({
   )
 }
 
-export function MenuFields({
+export function NavigationFields({
   site,
   onChange,
   choices,
 }: {
-  site: Appearance['site']
-  onChange: (site: Appearance['site']) => void
-  choices: AppearanceChoices
+  site: Pick<Appearance['site'], 'navigation' | 'secondaryNavigation'>
+  onChange: (site: Pick<Appearance['site'], 'navigation' | 'secondaryNavigation'>) => void
+  choices: Pick<AppearanceChoices, 'pages' | 'categories'>
 }) {
   const navigation = site.navigation
   return (
     <div className="adminForm">
       <h3>Menu header dan mobile</h3>
       <p className="appearanceHint">
-        Menu utama dipakai bersama pada header dan navigasi mobile. Kolom footer disusun pada tab
-        Footer.
+        Menu utama digunakan oleh navigasi tema dan menu mobile. Letaknya mengikuti tata letak tema.
       </p>
       {navigation.map((item, index) => (
         <fieldset className="appearanceGroup" key={index}>
@@ -1333,13 +1332,47 @@ export function MenuFields({
       >
         Tambah menu
       </button>
-      <h3>Tautan bawah navigasi kiri</h3>
+      <h3>Menu tambahan</h3>
       <LinksFields
         label="Tautan legal"
         links={site.secondaryNavigation}
         choices={choices}
         onChange={(secondaryNavigation) => onChange({ ...site, secondaryNavigation })}
       />
+    </div>
+  )
+}
+
+export function MenuFields({
+  site,
+  onChange,
+  choices,
+}: {
+  site: Appearance['site']
+  onChange: (site: Appearance['site']) => void
+  choices: AppearanceChoices
+}) {
+  return (
+    <div className="adminForm">
+      <NavigationFields
+        site={site}
+        choices={choices}
+        onChange={(navigation) => onChange({ ...site, ...navigation })}
+      />
+      <SocialFields site={site} onChange={(social) => onChange({ ...site, ...social })} />
+    </div>
+  )
+}
+
+export function SocialFields({
+  site,
+  onChange,
+}: {
+  site: Pick<Appearance['site'], 'social'>
+  onChange: (site: Pick<Appearance['site'], 'social'>) => void
+}) {
+  return (
+    <div className="adminForm">
       <h3>Akun sosial</h3>
       {site.social.map((social, index) => (
         <fieldset className="appearanceGroup" key={index}>

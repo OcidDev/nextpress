@@ -1,6 +1,6 @@
 import { userHasCapability } from '@/lib/core/roles'
 import 'server-only'
-import { and, count, desc, eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, ne, sql } from 'drizzle-orm'
 import { requireCmsUser } from '@/lib/admin'
 import { postScope, mediaScope } from './cms-scope'
 import {
@@ -106,10 +106,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     pendingComments,
     storedSettings,
   ] = await Promise.all([
-    db.select({ value: count() }).from(posts),
+    db.select({ value: count() }).from(posts).where(ne(posts.status, 'trash')),
     db.select({ value: count() }).from(posts).where(eq(posts.status, 'published')),
     db.select({ value: count() }).from(posts).where(eq(posts.status, 'draft')),
-    db.select({ value: count() }).from(pages),
+    db.select({ value: count() }).from(pages).where(ne(pages.status, 'trash')),
     db.select({ value: count() }).from(media),
     db.select({ value: count() }).from(comments).where(eq(comments.status, 'pending')),
     db.select({ value: count() }).from(authors),
@@ -122,6 +122,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     db
       .select({ id: posts.id, title: posts.title, status: posts.status, date: postDate })
       .from(posts)
+      .where(ne(posts.status, 'trash'))
       .orderBy(desc(postDate), posts.id)
       .limit(5),
     db
@@ -224,7 +225,7 @@ async function getAuthorDashboard(owner: { id: string; role: string }): Promise<
     db
       .select({ status: posts.status, value: count() })
       .from(posts)
-      .where(scope)
+      .where(and(scope, ne(posts.status, 'trash')))
       .groupBy(posts.status),
     db.select({ value: count() }).from(media).where(mediaScope(owner)),
     db.select({ value: count() }).from(authors).where(eq(authors.userId, owner.id)),
@@ -237,7 +238,7 @@ async function getAuthorDashboard(owner: { id: string; role: string }): Promise<
     db
       .select({ id: posts.id, title: posts.title, status: posts.status, date })
       .from(posts)
-      .where(scope)
+      .where(and(scope, ne(posts.status, 'trash')))
       .orderBy(desc(date), posts.id)
       .limit(5),
   ])

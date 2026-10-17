@@ -28,6 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(siteConfig.url),
     title: { default: settings.name, template: `%s — ${settings.name}` },
     description: settings.description,
+    icons: { icon: settings.icon || '/icon.svg', apple: settings.icon || '/icon.svg' },
     alternates: {
       canonical: siteConfig.url,
       types: { 'application/rss+xml': new URL('/feed.xml', siteConfig.url).href },

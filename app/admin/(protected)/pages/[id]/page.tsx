@@ -14,13 +14,14 @@ export default async function EditPage({
 }) {
   const session = await requireCapability('edit_others_pages')
   const page = await adminPage((await params).id)
-  if (!page) notFound()
+  if (!page || page.status === 'trash') notFound()
   return (
     <>
       <h1>Edit halaman</h1>
       <PageEditor
         contentSeo={await getContentSeoProvider()}
         canUpload={userHasCapability(session.user, 'upload_files')}
+        canPublish={userHasCapability(session.user, 'publish_pages')}
         key={page.id}
         page={page}
         saved={(await searchParams).saved === '1'}

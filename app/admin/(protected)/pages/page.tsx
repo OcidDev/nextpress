@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { listedPages, type ListSearch } from '@/lib/db/queries/admin-list'
 import { ListFilters } from '@/components/admin/ListFilters'
 import { AdminPagination } from '@/components/admin/AdminPagination'
+import { TrashActions } from '@/components/admin/TrashActions'
 import { DeleteForm } from '@/components/admin/DeleteForm'
 import { deletePage } from '@/server/actions/content'
 import { formatDate } from '@/lib/utils'
@@ -18,7 +19,34 @@ export default async function Pages({ searchParams }: { searchParams: Promise<Li
           Buat halaman
         </Link>
       </div>
-      <ListFilters basePath="/admin/pages" params={result.params} label="Halaman" />
+      <nav className="adminStatusTabs" aria-label="Status halaman">
+        <Link href="/admin/pages" aria-current={!result.params.status ? 'page' : undefined}>
+          Semua
+        </Link>
+        {[
+          ['draft', 'Draft'],
+          ['published', 'Terbit'],
+          ['trash', 'Sampah'],
+        ].map(([status, label]) => (
+          <Link
+            key={status}
+            href={`/admin/pages?status=${status}`}
+            aria-current={result.params.status === status ? 'page' : undefined}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+      <ListFilters
+        basePath="/admin/pages"
+        params={result.params}
+        label="Halaman"
+        statuses={[
+          { value: 'draft', label: 'Draft' },
+          { value: 'published', label: 'Terbit' },
+          { value: 'trash', label: 'Sampah' },
+        ]}
+      />
       <div className="tableWrap">
         <table className="adminTable">
           <thead>
@@ -57,7 +85,18 @@ export default async function Pages({ searchParams }: { searchParams: Promise<Li
             {result.rows.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <Link href={`/admin/pages/${item.id}`}>{item.title}</Link>
+                  {item.status === 'trash' ? (
+                    item.title
+                  ) : (
+                    <Link href={`/admin/pages/${item.id}`}>{item.title}</Link>
+                  )}
+                  <small className="adminListSecondary">
+                    {item.status === 'published'
+                      ? 'Terbit'
+                      : item.status === 'trash'
+                        ? 'Sampah'
+                        : 'Draft'}
+                  </small>
                   <small className="adminListSecondary">/{item.slug}</small>
                   {item.parentTitle && (
                     <small className="adminListSecondary">Induk: {item.parentTitle}</small>
@@ -67,9 +106,28 @@ export default async function Pages({ searchParams }: { searchParams: Promise<Li
                 <td>{formatDate(item.updatedAt.toISOString())}</td>
                 <td>
                   <div className="adminRowActions">
-                    <Link href={`/admin/pages/${item.id}`}>Edit</Link>
-                    <Link href={`/${item.slug}`}>Lihat</Link>
-                    <DeleteForm id={item.id} action={deletePage} />
+                    {item.status === 'trash' ? (
+                      <TrashActions kind="pages" id={item.id} />
+                    ) : (
+                      <>
+                        <Link href={`/admin/pages/${item.id}`}>Edit</Link>
+                        <Link
+                          href={
+                            item.status === 'published'
+                              ? `/${item.slug}`
+                              : `/admin/pages/${item.id}/preview`
+                          }
+                        >
+                          {item.status === 'published' ? 'Lihat' : 'Preview'}
+                        </Link>
+                        <DeleteForm
+                          id={item.id}
+                          action={deletePage}
+                          label="Ke Sampah"
+                          confirmation="Pindahkan halaman ini ke Sampah? Halaman dapat dipulihkan sebagai draft."
+                        />
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

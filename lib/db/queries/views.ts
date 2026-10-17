@@ -216,7 +216,7 @@ export async function validPublicViewPath(path: string, postId?: string) {
         await getDb()
           .select({ id: pages.id })
           .from(pages)
-          .where(eq(pages.slug, pieces[0]!))
+          .where(and(eq(pages.slug, pieces[0]!), eq(pages.status, 'published')))
           .limit(1)
       )[0],
     )

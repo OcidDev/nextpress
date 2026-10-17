@@ -322,7 +322,7 @@ export async function projectPageToCore(tx: CoreTransaction, pageId: string) {
       .values({
         id: targetId,
         type: 'page',
-        status: 'publish',
+        status: pg.status === 'published' ? 'publish' : pg.status,
         authorId: null,
         legacyAuthorId: null,
         slug: pg.slug,
@@ -332,13 +332,15 @@ export async function projectPageToCore(tx: CoreTransaction, pageId: string) {
         format: 'html',
         visibility: 'public',
         guid: `/${pg.slug}`,
-        publishedAt: pg.updatedAt,
+        publishedAt: pg.status === 'published' ? pg.updatedAt : null,
         createdAt: pg.updatedAt,
         modifiedAt: pg.updatedAt,
       })
       .onConflictDoUpdate({
         target: content.id,
         set: {
+          status: pg.status === 'published' ? 'publish' : pg.status,
+          publishedAt: pg.status === 'published' ? pg.updatedAt : null,
           slug: pg.slug,
           title: pg.title,
           content: pg.content,
@@ -553,6 +555,7 @@ export async function projectCoreToLegacy(tx: CoreTransaction, contentId: string
         title: c.title,
         slug: c.slug,
         content: c.content,
+        status: c.status === 'publish' ? 'published' : c.status === 'trash' ? 'trash' : 'draft',
         updatedAt: c.modifiedAt,
         seo: (allMeta.seo ?? meta.seo ?? null) as SEO | null,
       }

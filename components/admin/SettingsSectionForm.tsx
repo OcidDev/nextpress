@@ -35,6 +35,7 @@ export function SettingsSectionForm({
           name: value.name,
           description: value.description,
           logo: value.logo,
+          icon: value.icon,
           siteUrl: value.siteUrl,
           adminEmail: value.adminEmail,
           usersCanRegister: value.usersCanRegister,
@@ -202,6 +203,15 @@ export function SettingsSectionForm({
             </select>
           </label>
 
+          <label>
+            URL ikon situs (favicon)
+            <input value={value.icon} onChange={(e) => update('icon', e.target.value)} />
+          </label>
+          <MediaPicker
+            label="Pilih ikon situs"
+            onSelect={(media) => update('icon', `/api/media/${media.id}`)}
+          />
+          <small>Gunakan gambar persegi. Kosongkan untuk memakai ikon bawaan.</small>
           <label>
             URL Logo
             <input

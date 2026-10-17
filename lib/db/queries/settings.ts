@@ -2,7 +2,7 @@ import { initializeActiveTheme } from '@/lib/themes/manager'
 import { lockContentStructure } from '@/lib/core/content-mapping'
 import { rememberPostRoutes, validatePublicPermalinks } from '@/lib/content/permalink-server'
 import 'server-only'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { getDb, hasDatabase } from '@/lib/db'
 import { media, pages } from '@/lib/db/schema'
 import { getRequestOptions, withOptionsTransaction } from '@/lib/core/options-server'
@@ -34,6 +34,7 @@ export async function saveSettingsData(value: unknown) {
     await validateReading(tx, parsed)
     await validateDefaultCategory(tx, parsed)
     await validateLogo(tx, parsed.logo)
+    await validateLogo(tx, parsed.icon)
     await syncAppearanceSiteSettings(tx, parsed, options)
     await options.updateOption('site', parsed)
   })
@@ -44,6 +45,7 @@ export const settingsSections = {
     'name',
     'description',
     'logo',
+    'icon',
     'siteUrl',
     'adminEmail',
     'usersCanRegister',
@@ -66,6 +68,9 @@ export const settingsSections = {
     'blogPublic',
   ],
   permalinks: ['permalinkStructure', 'categoryBase', 'tagBase'],
+  menus: ['navigation', 'secondaryNavigation'],
+  footer: ['footer'],
+  social: ['social'],
   discussion: ['commentsEnabled'],
   integrations: ['gaId', 'adsenseId', 'viewsEnabled'],
 } as const
@@ -94,7 +99,10 @@ export async function saveSettingsSectionData(
     }
     if (section === 'reading') await validateReading(tx, parsed)
     if (section === 'writing') await validateDefaultCategory(tx, parsed)
-    if (section === 'general') await validateLogo(tx, parsed.logo)
+    if (section === 'general') {
+      await validateLogo(tx, parsed.logo)
+      await validateLogo(tx, parsed.icon)
+    }
     await syncAppearanceSiteSettings(tx, parsed, options, [...keys])
     await options.updateOption('site', parsed)
   })
@@ -126,7 +134,7 @@ async function validateReading(
     const [page] = await tx
       .select({ id: pages.id })
       .from(pages)
-      .where(eq(pages.id, id))
+      .where(and(eq(pages.id, id), eq(pages.status, 'published')))
       .for('share')
     if (!page) throw new SettingsValidationError('Laman yang dipilih sudah tidak tersedia.')
   }

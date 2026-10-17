@@ -14,7 +14,7 @@ export function useEditorSave({
   onSaved,
   initialSuccess,
 }: {
-  initial: { id: string; slug: string; version: string }
+  initial: { id: string; slug: string; version: string; status?: string }
   kind: 'posts' | 'pages'
   save: (state: ActionState, data: FormData) => Promise<ActionState>
   onSaved: (saved: NonNullable<ActionState['saved']>, submitted: FormData) => void
@@ -47,7 +47,12 @@ export function useEditorSave({
         if (submitIntent.current) data.set('intent', submitIntent.current)
         const result = await save(previous, data)
         if (result.saved) {
-          setRecord({ id: result.saved.id, slug: result.saved.slug, version: result.saved.version })
+          setRecord({
+            id: result.saved.id,
+            slug: result.saved.slug,
+            version: result.saved.version,
+            status: result.saved.status,
+          })
           onSaved(result.saved, data)
           const changedAfterSubmit = revision.current !== submittedRevision.current
           setDirty(changedAfterSubmit)
@@ -72,6 +77,17 @@ export function useEditorSave({
     },
     { success: initialSuccess },
   )
+  useEffect(() => {
+    if (!dirty || pending || navigating || record.status !== 'draft') return
+    const timer = window.setInterval(() => {
+      const element = form.current
+      if (!element || inFlight.current || !element.checkValidity()) return
+      // Never turn a published article into a draft or publish a selected status automatically.
+      if (new FormData(element).get('status') !== 'draft') return
+      element.requestSubmit()
+    }, 30000)
+    return () => window.clearInterval(timer)
+  }, [dirty, pending, navigating, record.status])
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     if (pending || inFlight.current) {
       event.preventDefault()

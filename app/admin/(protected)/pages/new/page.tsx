@@ -11,6 +11,7 @@ export default async function NewPage() {
       <PageEditor
         contentSeo={await getContentSeoProvider()}
         canUpload={userHasCapability(session.user, 'upload_files')}
+        canPublish={userHasCapability(session.user, 'publish_pages')}
         attributes={await getPageAttributeChoices()}
       />
     </>

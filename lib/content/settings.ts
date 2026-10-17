@@ -37,6 +37,7 @@ export const settingsSchema = z.object({
   name: z.string().trim().min(1).max(100),
   description: z.string().trim().max(500),
   logo: safeUrl,
+  icon: safeUrl.default(''),
   defaultMode: z.enum(['light', 'dark', 'system']),
   defaultTheme: z.string().regex(/^(?:[0-9]|10)$/),
   navigation: z.array(nav).max(20),

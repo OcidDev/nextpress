@@ -104,16 +104,42 @@ pnpm db:restore /path/to/backup.dump
 
 ## Project layout
 
-| Path                | Contents                                                   |
-| ------------------- | ---------------------------------------------------------- |
-| `app/`              | Routes: public site, admin, API handlers, feeds, sitemap.   |
-| `components/`       | Site, admin, editor, and UI components.                     |
-| `components/theme/` | Components that render the active theme's chrome.           |
-| `lib/core/`         | Content, terms, meta, options, roles, and tools.            |
-| `lib/db/`           | Drizzle schemas, migrations, and queries.                   |
-| `lib/themes/`       | Theme packages, templates, styles, and the customizer.      |
-| `lib/plugins/`      | Plugin packages, manifests, and server-side runtimes.       |
-| `lib/blocks/`       | Block system used by theme and page templates.              |
-| `lib/extensions/`   | Hook kernel and capability bridge.                          |
-| `server/actions/`   | Server actions used by admin forms.                         |
-| `data/`             | Site defaults: navigation, footer, social links, config.    |
+| Path                | Contents                                                  |
+| ------------------- | --------------------------------------------------------- |
+| `app/`              | Routes: public site, admin, API handlers, feeds, sitemap. |
+| `components/`       | Site, admin, editor, and UI components.                   |
+| `components/theme/` | Components that render the active theme's chrome.         |
+| `lib/core/`         | Content, terms, meta, options, roles, and tools.          |
+| `lib/db/`           | Drizzle schemas, migrations, and queries.                 |
+| `lib/themes/`       | Theme packages, templates, styles, and the customizer.    |
+| `lib/plugins/`      | Plugin packages, manifests, and server-side runtimes.     |
+| `lib/blocks/`       | Block system used by theme and page templates.            |
+| `lib/extensions/`   | Hook kernel and capability bridge.                        |
+| `server/actions/`   | Server actions used by admin forms.                       |
+| `data/`             | Site defaults: navigation, footer, social links, config.  |
+
+## Core site settings and editorial workflow
+
+`Pengaturan → Menu`, `Footer`, and `Tautan sosial` manage site-owned links independently
+of the active theme. Their placement and visual treatment follow the theme. Set the
+site favicon in `Pengaturan → Umum`; clearing it restores the bundled icon.
+
+New pages start as drafts. Existing pages remain published when migration `0001`
+is applied. Draft pages are excluded from public routes, the sitemap, and homepage
+selection; their saved content can be previewed privately from the editor. A page
+assigned as the homepage or posts page must be replaced in Reading settings before
+it can become a draft or be moved to Trash.
+
+Article and page drafts autosave every 30 seconds while changed and valid. Published
+content requires an explicit save. The editor's `Riwayat revisi` link shows up to 50
+recent snapshots and can restore the title, body, and editorial attributes. Restoring
+preserves the current URL, publication status, and SEO, and saves the replaced content
+in history. Changes made from another tab are checked before restoration. Revision
+history starts when content is saved after this feature is installed.
+
+Deleting an article or page first moves it to `Sampah`. Restore returns it to draft;
+permanent deletion is only available from Trash and also removes its revision history.
+Media referenced by revision history cannot be deleted while those revisions exist.
+
+Before deploying these changes, back up the database and run `pnpm db:migrate` and
+`pnpm db:check` before starting the new application build.

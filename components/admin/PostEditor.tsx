@@ -58,6 +58,7 @@ export function PostEditor({
     useEditorSave({
       initial: {
         id: post?.id || '',
+        status: post?.status || 'draft',
         slug: post?.slug || '',
         version: (post?.updatedAt || post?.publishedAt)?.toISOString() || '',
       },
@@ -229,6 +230,11 @@ export function PostEditor({
               )}
               {record.id && <Link href={`/admin/posts/${record.id}/preview`}>Preview</Link>}
             </div>
+            {record.id && <Link href={`/admin/posts/${record.id}/history`}>Riwayat revisi</Link>}
+            <small>
+              Draft disimpan otomatis setiap 30 detik saat ada perubahan dan judul sudah diisi.
+              Perubahan pada konten terbit perlu disimpan manual.
+            </small>
             <small>Ctrl+S / ⌘S untuk menyimpan sesuai status yang dipilih.</small>
           </section>
           <section className="adminEditorPanel">

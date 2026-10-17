@@ -10,6 +10,7 @@ import {
   deletePageData,
   quickEditPostData,
   bulkPostStatusData,
+  restoreTrashedContentData,
 } from '@/lib/db/queries/admin-content'
 import type { ActionState } from '@/lib/content/validation'
 import { doAction } from '@/lib/extensions/hooks'
@@ -104,4 +105,26 @@ export async function deletePage(_: ActionState, data: FormData): Promise<Action
   }
   refresh()
   redirect('/admin/pages')
+}
+
+export async function manageTrashedContent(_: ActionState, data: FormData): Promise<ActionState> {
+  await requireCmsUser()
+  try {
+    const kind = z.enum(['posts', 'pages']).parse(data.get('kind'))
+    const id = z
+      .string()
+      .regex(/^[a-f0-9]{32}$/)
+      .parse(data.get('id'))
+    const operation = z.enum(['restore', 'delete']).parse(data.get('operation'))
+    if (operation === 'restore') await restoreTrashedContentData(kind, id)
+    else if (kind === 'posts') await deletePostData(id, true)
+    else await deletePageData(id, true)
+    refresh()
+    return {
+      success:
+        operation === 'restore' ? 'Konten dipulihkan sebagai draft.' : 'Konten dihapus permanen.',
+    }
+  } catch (error) {
+    return message(error)
+  }
 }

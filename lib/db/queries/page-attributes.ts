@@ -1,3 +1,4 @@
+import { ne } from 'drizzle-orm'
 import 'server-only'
 import { requireCapability } from '@/lib/admin'
 import { getDb } from '@/lib/db'
@@ -15,7 +16,8 @@ export async function getPageAttributeChoices(excludeId?: string) {
         parentId: pages.parentId,
         menuOrder: pages.menuOrder,
       })
-      .from(pages),
+      .from(pages)
+      .where(ne(pages.status, 'trash')),
     getPageTemplates(),
   ])
   return {

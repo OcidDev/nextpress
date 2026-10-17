@@ -189,6 +189,7 @@ export const pages = pgTable(
     slug: varchar('slug', { length: 200 }).notNull(),
     title: text('title').notNull(),
     content: text('content').notNull().default(''),
+    status: varchar('status', { length: 16 }).notNull().default('published'),
     seo: jsonb('seo').$type<SEO>(),
     parentId: varchar('parent_id', { length: 32 }).references((): AnyPgColumn => pages.id, {
       onDelete: 'restrict',
@@ -199,6 +200,8 @@ export const pages = pgTable(
   },
   (t) => [
     uniqueIndex('pages_slug_idx').on(t.slug),
+    check('pages_status_check', sql`${t.status} in ('draft', 'published', 'trash')`),
+    index('pages_status_idx').on(t.status),
     index('pages_parent_order_idx').on(t.parentId, t.menuOrder),
     check('pages_parent_not_self', sql`${t.parentId} is null or ${t.parentId} <> ${t.id}`),
   ],
@@ -223,3 +226,19 @@ export {
   legacyContentMap,
 } from './data-schema'
 export { themePackages } from './theme-schema'
+
+export const contentRevisions = pgTable(
+  'cms_editor_revisions',
+  {
+    id: varchar('id', { length: 32 }).primaryKey(),
+    kind: varchar('kind', { length: 8 }).notNull(),
+    contentId: varchar('content_id', { length: 32 }).notNull(),
+    authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+    snapshot: jsonb('snapshot').$type<Record<string, string | string[]>>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('cms_editor_revisions_content_idx').on(t.kind, t.contentId, t.createdAt),
+    check('cms_editor_revisions_kind_check', sql`${t.kind} in ('posts', 'pages')`),
+  ],
+)

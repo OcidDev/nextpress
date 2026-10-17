@@ -15,6 +15,7 @@ import type { PageAttributeChoices } from '@/lib/db/queries/page-attributes'
 function initialFields(page?: PageRow) {
   return {
     title: page?.title || '',
+    status: page?.status === 'published' ? 'published' : 'draft',
     slug: page?.slug || '',
     parentId: page?.parentId || '',
     pageTemplate: page?.pageTemplate || 'default',
@@ -28,11 +29,13 @@ export function PageEditor({
   attributes,
   contentSeo,
   canUpload,
+  canPublish,
 }: {
   page?: PageRow
   saved?: boolean
   attributes: PageAttributeChoices
   contentSeo: ContentSeoProvider | null
+  canPublish: boolean
   canUpload: boolean
 }) {
   const [fields, setFields] = useState(() => initialFields(page))
@@ -42,6 +45,7 @@ export function PageEditor({
     useEditorSave({
       initial: {
         id: page?.id || '',
+        status: page?.status || 'draft',
         slug: page?.slug || '',
         version: page?.updatedAt.toISOString() || '',
       },
@@ -52,6 +56,9 @@ export function PageEditor({
         setFields((current) => ({
           ...current,
           ...(current.slug === submitted.get('slug') ? { slug: saved.slug } : {}),
+          ...(current.status === submitted.get('status')
+            ? { status: saved.status || current.status }
+            : {}),
         }))
         setSlugManual(true)
       },
@@ -118,7 +125,23 @@ export function PageEditor({
         <aside className="adminEditorAside" aria-label="Pengaturan halaman">
           <section className="adminEditorPanel">
             <h2>Publikasi</h2>
-            <p>Halaman yang disimpan langsung tersedia untuk pembaca.</p>
+            <label>
+              Status
+              <select
+                name="status"
+                value={fields.status}
+                onChange={(event) => update('status', event.target.value)}
+              >
+                <option value="draft">Draft</option>
+                {(canPublish || page?.status === 'published') && (
+                  <option value="published">Terbit</option>
+                )}
+              </select>
+            </label>
+            <p>
+              Draft hanya dapat dilihat melalui preview privat. Simpan sebagai terbit untuk
+              menampilkannya di situs.
+            </p>
             <p className="adminEditorSaveState" aria-live="polite">
               {pending
                 ? 'Menyimpan perubahan…'
@@ -131,11 +154,27 @@ export function PageEditor({
             <button className="button" disabled={pending}>
               {pending ? 'Menyimpan…' : 'Simpan halaman'}
             </button>
+            <small>
+              Draft disimpan otomatis setiap 30 detik saat ada perubahan dan judul sudah diisi.
+              Perubahan pada konten terbit perlu disimpan manual.
+            </small>
             <small>Ctrl+S / ⌘S untuk menyimpan halaman.</small>
             {record.id && (
-              <Link href={`/${record.slug}`} target="_blank" rel="noopener noreferrer">
-                Lihat halaman
-              </Link>
+              <>
+                <Link
+                  href={`/admin/pages/${record.id}/preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Preview tersimpan
+                </Link>
+                <Link href={`/admin/pages/${record.id}/history`}>Riwayat revisi</Link>
+                {page?.status === 'published' && (
+                  <Link href={`/${record.slug}`} target="_blank" rel="noopener noreferrer">
+                    Lihat halaman
+                  </Link>
+                )}
+              </>
             )}
           </section>
           <section className="adminEditorPanel" aria-labelledby="page-attributes-heading">

@@ -155,7 +155,7 @@ export async function exportWxrData(filters?: {
         title: pg.title,
         slug: pg.slug,
         content: pg.content,
-        status: 'publish',
+        status: pg.status === 'published' ? 'publish' : pg.status,
         type: 'page',
         date: pg.updatedAt ? pg.updatedAt.toISOString() : new Date().toISOString(),
         author: 'Admin',
@@ -221,6 +221,7 @@ export async function importWxrData(
           title: item.title,
           slug: item.slug,
           content: cleanContent,
+          status: item.status === 'publish' || item.status === 'published' ? 'published' : 'draft',
         })
         await projectPageToCore(tx, id)
         importedCount++
@@ -306,6 +307,7 @@ export async function importBloggerData(
           title: item.title,
           slug: item.slug,
           content: cleanContent,
+          status: item.status === 'published' ? 'published' : 'draft',
         })
         await projectPageToCore(tx, id)
         importedCount++

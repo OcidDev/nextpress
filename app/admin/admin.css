@@ -3122,3 +3122,24 @@ dialog.mediaPicker.adminRoot {
     margin-inline: 0;
   }
 }
+.adminHistoryLayout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.adminHistoryLayout nav {
+  max-height: 65vh;
+  overflow: auto;
+}
+
+.adminHistoryLayout [aria-current='page'] {
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+  .adminHistoryLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

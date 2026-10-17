@@ -1,3 +1,5 @@
+import { recordContentRevision } from './content-history'
+import { contentRevisions } from '@/lib/db/schema'
 import {
   getContentSeoProvider,
   lockContentSeo,
@@ -5,7 +7,7 @@ import {
 } from '@/lib/plugins/content-seo-server'
 import { initializeActiveTheme } from '@/lib/themes/manager'
 import { withOptionsTransaction } from '@/lib/core/options-server'
-import { settingsSchema } from '@/lib/content/settings'
+import { defaultSettings, settingsSchema } from '@/lib/content/settings'
 import { getSettings } from './settings'
 import {
   rememberPostRoutes,
@@ -206,13 +208,15 @@ export async function quickEditPostData(data: FormData) {
       .from(posts)
       .where(and(eq(posts.id, input.id), postScope(session.user)))
       .for('update')
-    if (!old) throw new Error('Artikel tidak ditemukan')
+    if (!old || old.status === 'trash')
+      throw new Error('Artikel tidak ditemukan atau berada di Sampah')
     await requirePostPermission(tx, session.user, old, 'edit_post')
     const version = old.updatedAt || old.publishedAt
     if (version.getTime() !== new Date(input.version).getTime())
       throw new Error('Artikel telah berubah. Muat ulang daftar sebelum mengedit kembali.')
     if (input.status === 'published' && wordCount(old.content) === 0)
       throw new Error('Isi artikel wajib diisi sebelum diterbitkan')
+    await recordContentRevision(tx, 'posts', old.id, session.user.id)
     await rememberPostRoutes(tx, await getSettings(), [old.id])
     const slug = await contentSlug(tx, 'posts', { ...input, slugMode: 'manual' }, old.id, old.slug)
     await tx
@@ -228,6 +232,7 @@ export async function quickEditPostData(data: FormData) {
       .where(eq(posts.id, old.id))
     await validatePublicPermalinks(tx, await getSettings())
     await projectPostToCore(tx, old.id)
+    await recordContentRevision(tx, 'posts', old.id, session.user.id)
   })
 }
 
@@ -248,7 +253,10 @@ export async function bulkPostStatusData(data: FormData) {
       throw new Error(
         'Ada artikel yang tidak ditemukan atau tidak dapat Anda kelola. Tidak ada perubahan disimpan.',
       )
-    for (const post of selected) await requirePostPermission(tx, session.user, post, 'edit_post')
+    for (const post of selected) {
+      if (post.status === 'trash') throw new Error('Pulihkan artikel dari Sampah sebelum mengedit.')
+      await requirePostPermission(tx, session.user, post, 'edit_post')
+    }
     if (
       selected.some(
         (post) =>
@@ -313,12 +321,14 @@ export async function savePostData(data: FormData) {
           .where(and(eq(posts.id, id), postScope(session.user)))
           .for('update')
       : []
-    if (input.id && !old) throw new Error('Artikel tidak ditemukan')
+    if (input.id && (!old || old.status === 'trash'))
+      throw new Error('Artikel tidak ditemukan atau berada di Sampah')
     if (old) await requirePostPermission(tx, session.user, old, 'edit_post')
     if (old && (old.updatedAt || old.publishedAt).getTime() !== new Date(input.version).getTime())
       throw new Error(
         'Artikel telah berubah. Salin perubahan Anda, lalu muat ulang editor sebelum menyimpan kembali.',
       )
+    if (old) await recordContentRevision(tx, 'posts', id, session.user.id)
     if (old) await rememberPostRoutes(tx, await getSettings(), [id])
     oldSlug = old?.slug
     const authorId = old?.authorId || (await ensureUserAuthor(tx, session.user.id)).id
@@ -374,6 +384,7 @@ export async function savePostData(data: FormData) {
     if (tags.length) await tx.insert(postTags).values(tags.map((tag) => ({ postId: id, tag })))
     await validatePublicPermalinks(tx, await getSettings())
     await projectPostToCore(tx, id)
+    await recordContentRevision(tx, 'posts', id, session.user.id)
   })
   return {
     id,
@@ -383,7 +394,7 @@ export async function savePostData(data: FormData) {
     status: input.status,
   }
 }
-export async function deletePostData(id: string) {
+export async function deletePostData(id: string, permanent = false) {
   const session = await requireCapability('delete_posts')
   return getDb().transaction(async (tx) => {
     await lockContentStructure(tx)
@@ -394,8 +405,27 @@ export async function deletePostData(id: string) {
       .for('update')
     if (!post) throw new Error('Artikel tidak ditemukan')
     await requirePostPermission(tx, session.user, post, 'delete_post')
-    await deleteCoreProjection(tx, id, 'post')
-    await tx.delete(posts).where(eq(posts.id, id))
+    if (permanent) {
+      if (post.status !== 'trash') throw new Error('Pindahkan artikel ke Sampah terlebih dahulu.')
+      await deleteCoreProjection(tx, id, 'post')
+      await tx
+        .delete(contentRevisions)
+        .where(and(eq(contentRevisions.kind, 'posts'), eq(contentRevisions.contentId, id)))
+      await tx.delete(posts).where(eq(posts.id, id))
+    } else {
+      if (post.status === 'trash') throw new Error('Artikel sudah berada di Sampah.')
+      await recordContentRevision(tx, 'posts', id, session.user.id)
+      await tx
+        .update(posts)
+        .set({
+          status: 'trash',
+          updatedAt: new Date(
+            Math.max(Date.now(), (post.updatedAt || post.publishedAt).getTime() + 1),
+          ),
+        })
+        .where(eq(posts.id, id))
+      await projectPostToCore(tx, id)
+    }
     return { slug: post.slug }
   })
 }
@@ -404,11 +434,13 @@ export async function adminPage(id: string) {
   return (await getDb().select().from(pages).where(eq(pages.id, id)))[0]
 }
 export async function savePageData(data: FormData) {
-  await requireCapability('edit_pages')
-  await requireCapability('edit_published_pages')
+  const session = await requireCapability('edit_pages')
   await requireCapability('edit_others_pages')
-  await requireCapability('publish_pages')
-  const input = pageInput.parse(Object.fromEntries(data))
+  const input = pageInput.parse({
+    ...Object.fromEntries(data),
+    ...(data.get('intent') === 'publish' ? { status: 'published' } : {}),
+  })
+  if (input.status === 'published') await requireCapability('publish_pages')
   const id = input.id || newId()
   const content = cleanHtml(input.content)
   // Page attributes share the activation/plugin locks while validating template availability.
@@ -418,11 +450,17 @@ export async function savePageData(data: FormData) {
     if (data.has('contentSeoProvider'))
       await validateMediaReferences(tx, '', String(data.get('seoImage') || ''))
     await validateMediaReferences(tx, content)
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
     await lockContentStructure(tx)
     const [old] = input.id
       ? await tx.select().from(pages).where(eq(pages.id, id)).for('update')
       : []
-    if (input.id && !old) throw new Error('Halaman tidak ditemukan')
+    if (input.id && (!old || old.status === 'trash'))
+      throw new Error('Halaman tidak ditemukan atau berada di Sampah')
+    if (old?.status === 'published' && !userHasCapability(session.user, 'edit_published_pages'))
+      throw new Error('Tidak memiliki izin mengedit halaman terbit.')
+    if (old && input.status !== 'published') await guardAssignedPage(tx, id)
+    if (old) await recordContentRevision(tx, 'pages', id, session.user.id)
     if (old && old.updatedAt.getTime() !== new Date(input.version).getTime())
       throw new Error(
         'Halaman telah berubah. Salin perubahan Anda, lalu muat ulang editor sebelum menyimpan kembali.',
@@ -439,6 +477,14 @@ export async function savePageData(data: FormData) {
       })
       .from(pages)
     validatePageParent(pageRows, id, parentId)
+    if (parentId && parentId !== old?.parentId) {
+      const [parent] = await tx
+        .select({ status: pages.status })
+        .from(pages)
+        .where(eq(pages.id, parentId))
+      if (!parent || parent.status === 'trash')
+        throw new Error('Induk halaman berada di Sampah atau sudah dihapus.')
+    }
     if (
       pageTemplate !== 'default' &&
       pageTemplate !== old?.pageTemplate &&
@@ -454,6 +500,7 @@ export async function savePageData(data: FormData) {
       menuOrder: input.menuOrder ?? old?.menuOrder ?? 0,
       pageTemplate,
       content,
+      status: input.status,
       updatedAt: new Date(Math.max(Date.now(), old ? old.updatedAt.getTime() + 1 : 0)),
       seo: saveContentSeo(seoProvider, data, old?.seo),
     }
@@ -461,7 +508,9 @@ export async function savePageData(data: FormData) {
     else await tx.insert(pages).values({ id, ...values })
     await validatePublicPermalinks(tx, await getSettings())
     await projectPageToCore(tx, id)
+    await recordContentRevision(tx, 'pages', id, session.user.id)
     return {
+      status: input.status,
       id,
       slug: savedSlug,
       oldSlug: old?.slug,
@@ -469,8 +518,8 @@ export async function savePageData(data: FormData) {
     }
   })
 }
-export async function deletePageData(id: string) {
-  await requireCapability('delete_others_pages')
+export async function deletePageData(id: string, permanent = false) {
+  const session = await requireCapability('delete_others_pages')
   await requireCapability('delete_published_pages')
   return withOptionsTransaction(async (tx, options) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
@@ -483,6 +532,23 @@ export async function deletePageData(id: string) {
       [settings.pageOnFront, settings.pageForPosts].includes(id)
     )
       throw new Error('Pilih laman pengganti di Pengaturan → Membaca sebelum menghapus laman ini.')
+    if (!permanent) {
+      if (page.status === 'trash') throw new Error('Halaman sudah berada di Sampah.')
+      await recordContentRevision(tx, 'pages', id, session.user.id)
+      await tx
+        .update(pages)
+        .set({
+          status: 'trash',
+          updatedAt: new Date(Math.max(Date.now(), page.updatedAt.getTime() + 1)),
+        })
+        .where(eq(pages.id, id))
+      await projectPageToCore(tx, id)
+      return { slug: page.slug }
+    }
+    if (page.status !== 'trash') throw new Error('Pindahkan halaman ke Sampah terlebih dahulu.')
+    await tx
+      .delete(contentRevisions)
+      .where(and(eq(contentRevisions.kind, 'pages'), eq(contentRevisions.contentId, id)))
     // WordPress reparents direct children when a page is permanently deleted.
     const children = await tx
       .update(pages)
@@ -493,5 +559,57 @@ export async function deletePageData(id: string) {
     await deleteCoreProjection(tx, id, 'page')
     const [deleted] = await tx.delete(pages).where(eq(pages.id, id)).returning({ slug: pages.slug })
     return deleted
+  })
+}
+
+async function guardAssignedPage(tx: ContentTransaction, id: string) {
+  const { options } = await import('@/lib/db/schema')
+  const [row] = await tx
+    .select({ value: options.value })
+    .from(options)
+    .where(eq(options.name, 'site'))
+  const settings = settingsSchema.parse(row?.value ?? defaultSettings())
+  if (settings.showOnFront === 'page' && [settings.pageOnFront, settings.pageForPosts].includes(id))
+    throw new Error(
+      'Pilih laman pengganti di Pengaturan → Membaca sebelum mengubah halaman ini menjadi draft.',
+    )
+}
+
+export async function restoreTrashedContentData(kind: 'posts' | 'pages', id: string) {
+  const session = await requireCapability(kind === 'posts' ? 'delete_posts' : 'delete_others_pages')
+  return getDb().transaction(async (tx) => {
+    await lockContentStructure(tx)
+    if (kind === 'posts') {
+      const [post] = await tx
+        .select()
+        .from(posts)
+        .where(and(eq(posts.id, id), postScope(session.user)))
+        .for('update')
+      if (!post || post.status !== 'trash') throw new Error('Artikel tidak ditemukan di Sampah.')
+      await requirePostPermission(tx, session.user, post, 'delete_post')
+      await requirePostPermission(tx, session.user, post, 'edit_post')
+      await tx
+        .update(posts)
+        .set({
+          status: 'draft',
+          updatedAt: new Date(
+            Math.max(Date.now(), (post.updatedAt || post.publishedAt).getTime() + 1),
+          ),
+        })
+        .where(eq(posts.id, id))
+      await projectPostToCore(tx, id)
+    } else {
+      await requireCapability('edit_others_pages')
+      const [page] = await tx.select().from(pages).where(eq(pages.id, id)).for('update')
+      if (!page || page.status !== 'trash') throw new Error('Halaman tidak ditemukan di Sampah.')
+      await tx
+        .update(pages)
+        .set({
+          status: 'draft',
+          updatedAt: new Date(Math.max(Date.now(), page.updatedAt.getTime() + 1)),
+        })
+        .where(eq(pages.id, id))
+      await projectPageToCore(tx, id)
+    }
   })
 }
