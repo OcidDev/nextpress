@@ -1,0 +1,79 @@
+name: nextpress-release
+
+# Publishing a tag is the only way a version becomes installable. Builds from
+# branches never produce release assets, so main can move without offering an
+# update that was not tested as a release.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nextpress-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nextpress
+          POSTGRES_PASSWORD: nextpress
+          POSTGRES_DB: nextpress
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nextpress"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://nextpress:nextpress@localhost:5432/nextpress
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-not-a-real-secret-000000000000
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The previous tag determines rollbackSafe and the packaging script
+          # verifies that the tag points at HEAD.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm build
+
+      - run: pnpm db:migrate
+      - run: pnpm db:check
+
+      - name: Build release asset and manifest
+        run: node scripts/package-release.mjs "${GITHUB_REF_NAME}" dist
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/nextpress-${GITHUB_REF_NAME#v}.tar.gz" \
+            dist/nextpress-release.json \
+            --title "NextPress ${GITHUB_REF_NAME#v}" \
+            --notes-file "docs/releases/${GITHUB_REF_NAME}.md" \
+            --verify-tag

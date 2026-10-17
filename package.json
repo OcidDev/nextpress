@@ -20,7 +20,8 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "admin:reset": "tsx scripts/reset-admin-password.ts",
     "plugin:pack": "node scripts/package-plugin.mjs",
-    "theme:pack": "tsx scripts/package-theme.ts"
+    "theme:pack": "tsx scripts/package-theme.ts",
+    "release:pack": "node scripts/package-release.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.4",
