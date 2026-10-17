@@ -2,7 +2,7 @@ import 'server-only'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { requireCapability } from '@/lib/admin'
 import { getDb, hasDatabase } from '@/lib/db'
-import { plugins, options } from '@/lib/db/schema'
+import { pages, plugins, options } from '@/lib/db/schema'
 import { withOptionsTransaction } from '@/lib/core/options-server'
 import {
   defaultPluginConfig,
@@ -278,6 +278,23 @@ export async function uninstallPluginData(id: string, revision: number, discardP
           'Plugin masih digunakan oleh versi pemulihan Tampilan. Pilih Hapus versi pemulihan Tampilan yang memakai plugin ini untuk menghapus plugin beserta versi pemulihan tersebut.',
         )
       await optionApi.deleteOption('appearance:previous')
+    }
+    // Page templates contributed by the plugin are referenced by pages themselves,
+    // not by appearance revisions. Drafts and Trash count too: restoring the page
+    // later would silently drop its layout.
+    const inUse = await tx
+      .select({ id: pages.id, title: pages.title, status: pages.status })
+      .from(pages)
+      .where(sql`${pages.pageTemplate} like ${`plugin:${id}:%`}`)
+    if (inUse.length) {
+      const labels = { draft: 'draf', published: 'terbit', trash: 'Sampah' } as const
+      const names = inUse
+        .slice(0, 5)
+        .map((page) => `"${page.title}" (${labels[page.status as keyof typeof labels] ?? page.status})`)
+        .join(', ')
+      throw new PluginValidationError(
+        `Plugin masih dipakai template halaman: ${names}${inUse.length > 5 ? ` dan ${inUse.length - 5} halaman lain` : ''}. Pilih template lain pada halaman tersebut sebelum menghapus plugin.`,
+      )
     }
     await tx.delete(plugins).where(eq(plugins.id, id))
     return { id }
