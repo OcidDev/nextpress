@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useId, useState } from 'react'
 import {
   createSection,
@@ -358,44 +359,6 @@ export function LinksFields({
   )
 }
 
-export function IdentityFields({
-  site,
-  onChange,
-}: {
-  site: Appearance['site']
-  onChange: (site: Appearance['site']) => void
-}) {
-  return (
-    <div className="adminForm">
-      <TextField
-        label="Nama situs"
-        value={site.name}
-        maxLength={100}
-        onChange={(name) => onChange({ ...site, name })}
-      />
-      <TextareaField
-        label="Deskripsi situs"
-        value={site.description}
-        maxLength={500}
-        onChange={(description) => onChange({ ...site, description })}
-      />
-      <TextField
-        label="Logo (URL)"
-        value={site.logo}
-        maxLength={2000}
-        onChange={(logo) => onChange({ ...site, logo })}
-      />
-      <MediaPicker
-        label="Pilih logo dari media"
-        onSelect={(media) => onChange({ ...site, logo: `/api/media/${media.id}` })}
-      />
-      <p className="appearanceHint">
-        Nama, deskripsi, dan logo rancangan mulai muncul di situs setelah diterapkan.
-      </p>
-    </div>
-  )
-}
-
 export function StyleFields({
   config,
   onChange,
@@ -413,25 +376,6 @@ export function StyleFields({
           { value: 'reference', label: 'Referensi' },
         ]}
         onChange={(design) => onChange({ ...config, style: { ...config.style, design } })}
-      />
-      <SelectField
-        label="Mode bawaan"
-        value={config.site.defaultMode}
-        options={[
-          { value: 'system', label: 'Ikuti perangkat' },
-          { value: 'light', label: 'Terang' },
-          { value: 'dark', label: 'Gelap' },
-        ]}
-        onChange={(defaultMode) => onChange({ ...config, site: { ...config.site, defaultMode } })}
-      />
-      <SelectField
-        label="Palet warna"
-        value={config.site.defaultTheme}
-        options={Array.from({ length: 11 }, (_, index) => ({
-          value: String(index),
-          label: `Palet ${index + 1}`,
-        }))}
-        onChange={(defaultTheme) => onChange({ ...config, site: { ...config.site, defaultTheme } })}
       />
       <SelectField
         label="Lebar konten"
@@ -452,7 +396,8 @@ export function StyleFields({
         onChange={(fontSize) => onChange({ ...config, style: { ...config.style, fontSize } })}
       />
       <p className="appearanceHint">
-        Pembaca tetap dapat memilih mode dan palet sendiri jika kontrol tema ditampilkan.
+        Mode bawaan dan palet warna diatur di Pengaturan → Membaca. Pembaca tetap dapat memilih
+        mode dan palet sendiri jika kontrol tema ditampilkan.
       </p>
       <h3>Tindakan kartu artikel</h3>
       <ToggleField
@@ -689,76 +634,56 @@ export function HomeFields({
   const hasLatest = home.sections.some((section) => section.type === 'latest')
   return (
     <div className="adminForm">
+      <p className="appearanceHint">
+        Beranda jenis (daftar artikel atau halaman statis) diatur di{' '}
+        <Link href="/admin/settings/reading">Pengaturan → Membaca</Link>. Bagian berikut hanya
+        berlaku untuk beranda yang menampilkan daftar artikel.
+      </p>
       <SelectField
-        label="Isi beranda"
-        value={home.mode}
+        label="Kolom kartu mobile"
+        value={String(home.mobileColumns)}
         options={[
-          { value: 'posts', label: 'Bagian dan daftar artikel' },
-          { value: 'page', label: 'Halaman pilihan' },
+          { value: '1', label: 'Satu kolom' },
+          { value: '2', label: 'Dua kolom ringkas' },
         ]}
-        onChange={(mode) => onChange({ ...home, mode })}
+        onChange={(value) => onChange({ ...home, mobileColumns: value === '2' ? 2 : 1 })}
       />
-      {home.mode === 'page' ? (
-        <SelectField
-          label="Halaman beranda"
-          value={home.pageId}
-          options={[
-            { value: '', label: 'Pilih halaman…' },
-            ...choices.pages.map((page) => ({ value: page.id, label: page.title })),
-          ]}
-          onChange={(pageId) => onChange({ ...home, pageId })}
-        />
-      ) : (
-        <>
-          <SelectField
-            label="Kolom kartu mobile"
-            value={String(home.mobileColumns)}
-            options={[
-              { value: '1', label: 'Satu kolom' },
-              { value: '2', label: 'Dua kolom ringkas' },
-            ]}
-            onChange={(value) => onChange({ ...home, mobileColumns: value === '2' ? 2 : 1 })}
-          />
-          <p className="appearanceHint">
-            Geser bagian atau gunakan panah untuk mengubah urutan. Daftar artikel utama hanya dapat
-            ditambahkan satu kali.
-          </p>
-          <SortableItems
-            items={home.sections}
-            labelFor={(section) => sectionLabels[section.type]}
-            onChange={(sections) => onChange({ ...home, sections })}
-            canDuplicate={(section) => section.type !== 'latest' && home.sections.length < 20}
-            renderFields={(section, update) => (
-              <SectionFields section={section} onChange={update} choices={choices} />
-            )}
-          />
-          <div className="appearanceAddRow">
-            <label>
-              Jenis bagian baru
-              <select
-                aria-label="Jenis bagian baru"
-                value={newType}
-                onChange={(event) => setNewType(event.target.value as Section['type'])}
-              >
-                {sectionTypes.map((type) => (
-                  <option key={type} value={type} disabled={type === 'latest' && hasLatest}>
-                    {sectionLabels[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              disabled={home.sections.length >= 20 || (newType === 'latest' && hasLatest)}
-              onClick={() =>
-                onChange({ ...home, sections: [...home.sections, createSection(newType)] })
-              }
-            >
-              Tambah bagian
-            </button>
-          </div>
-        </>
-      )}
+      <p className="appearanceHint">
+        Geser bagian atau gunakan panah untuk mengubah urutan. Daftar artikel utama hanya dapat
+        ditambahkan satu kali.
+      </p>
+      <SortableItems
+        items={home.sections}
+        labelFor={(section) => sectionLabels[section.type]}
+        onChange={(sections) => onChange({ ...home, sections })}
+        canDuplicate={(section) => section.type !== 'latest' && home.sections.length < 20}
+        renderFields={(section, update) => (
+          <SectionFields section={section} onChange={update} choices={choices} />
+        )}
+      />
+      <div className="appearanceAddRow">
+        <label>
+          Jenis bagian baru
+          <select
+            aria-label="Jenis bagian baru"
+            value={newType}
+            onChange={(event) => setNewType(event.target.value as Section['type'])}
+          >
+            {sectionTypes.map((type) => (
+              <option key={type} value={type} disabled={type === 'latest' && hasLatest}>
+                {sectionLabels[type]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          disabled={home.sections.length >= 20 || (newType === 'latest' && hasLatest)}
+          onClick={() => onChange({ ...home, sections: [...home.sections, createSection(newType)] })}
+        >
+          Tambah bagian
+        </button>
+      </div>
     </div>
   )
 }
@@ -1076,101 +1001,9 @@ export function FooterFields({
       />
       <h3>Kolom tautan footer</h3>
       <p className="appearanceHint">
-        Maksimal tiga kolom tautan. Widget tambahan ditampilkan setelah kolom ini.
+        Judul dan tautan kolom footer diatur di Pengaturan → Footer. Bagian ini menentukan gaya
+        tampilan dan widget tambahan.
       </p>
-      {config.site.footer.map((column, index) => (
-        <fieldset className="appearanceGroup" key={index}>
-          <legend>Kolom {index + 1}</legend>
-          <ToggleField
-            label={`Aktifkan kolom ${index + 1}`}
-            value={column.enabled}
-            onChange={(enabled) =>
-              onChange({
-                ...config,
-                site: {
-                  ...config.site,
-                  footer: config.site.footer.map((item, i) =>
-                    i === index ? { ...item, enabled } : item,
-                  ),
-                },
-              })
-            }
-          />
-          <TextField
-            label="Judul kolom"
-            value={column.title}
-            maxLength={80}
-            onChange={(title) =>
-              onChange({
-                ...config,
-                site: {
-                  ...config.site,
-                  footer: config.site.footer.map((item, i) =>
-                    i === index ? { ...item, title } : item,
-                  ),
-                },
-              })
-            }
-          />
-          <LinksFields
-            links={column.links}
-            choices={choices}
-            onChange={(links) =>
-              onChange({
-                ...config,
-                site: {
-                  ...config.site,
-                  footer: config.site.footer.map((item, i) =>
-                    i === index ? { ...item, links } : item,
-                  ),
-                },
-              })
-            }
-          />
-          <div className="appearanceInlineActions">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => {
-                const footer = [...config.site.footer]
-                ;[footer[index], footer[index - 1]] = [footer[index - 1]!, footer[index]!]
-                onChange({ ...config, site: { ...config.site, footer } })
-              }}
-            >
-              Naikkan kolom
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...config,
-                  site: {
-                    ...config.site,
-                    footer: config.site.footer.filter((_, i) => i !== index),
-                  },
-                })
-              }
-            >
-              Hapus kolom
-            </button>
-          </div>
-        </fieldset>
-      ))}
-      <button
-        type="button"
-        disabled={config.site.footer.length >= 3}
-        onClick={() =>
-          onChange({
-            ...config,
-            site: {
-              ...config.site,
-              footer: [...config.site.footer, { title: 'Kolom baru', links: [], enabled: true }],
-            },
-          })
-        }
-      >
-        Tambah kolom footer
-      </button>
       <h3>Widget footer</h3>
       <WidgetArea
         widgets={config.footerWidgets}
@@ -1339,27 +1172,6 @@ export function NavigationFields({
         choices={choices}
         onChange={(secondaryNavigation) => onChange({ ...site, secondaryNavigation })}
       />
-    </div>
-  )
-}
-
-export function MenuFields({
-  site,
-  onChange,
-  choices,
-}: {
-  site: Appearance['site']
-  onChange: (site: Appearance['site']) => void
-  choices: AppearanceChoices
-}) {
-  return (
-    <div className="adminForm">
-      <NavigationFields
-        site={site}
-        choices={choices}
-        onChange={(navigation) => onChange({ ...site, ...navigation })}
-      />
-      <SocialFields site={site} onChange={(social) => onChange({ ...site, ...social })} />
     </div>
   )
 }

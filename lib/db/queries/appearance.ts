@@ -3,6 +3,7 @@ import 'server-only'
 import { and, eq, inArray, lte, sql } from 'drizzle-orm'
 import { requireCapability } from '@/lib/admin'
 import {
+  appearanceChrome,
   appearanceEnvelopeSchema,
   appearanceSchema,
   appearanceSite,
@@ -53,16 +54,38 @@ function parseEnvelope(value: unknown): AppearanceEnvelope | undefined {
   return parsed.success ? parsed.data : undefined
 }
 
+/**
+ * Identity, navigation, footer links, social links, and reading settings live in
+ * the core "site" option, not in an appearance revision. Envelopes keep a copy of
+ * those fields only because existing revisions were stored that way and because
+ * the renderer expects one object; the copy is refreshed from core on every read,
+ * so a settings change can never be shadowed by a stale draft or a restore.
+ */
+function themeNeutral(site: SiteSettings, config: Appearance): Appearance {
+  return {
+    ...config,
+    site: appearanceSite(site),
+    home: { ...config.home, mode: site.showOnFront, pageId: site.pageOnFront },
+  }
+}
+
 async function documents(options: OptionsApi) {
   const values = await options.getOptions(['site', ...Object.values(appearanceKeys)])
   const parsedSite = settingsSchema.safeParse(values.get('site'))
   const site = parsedSite.success ? parsedSite.data : defaultSettings()
-  const active = parseEnvelope(values.get(appearanceKeys.active)) ?? {
-    revision: 0,
-    config: defaultAppearance(site),
-  }
-  const draft = parseEnvelope(values.get(appearanceKeys.draft)) ?? active
-  return { site, active, draft, previous: parseEnvelope(values.get(appearanceKeys.previous)) }
+  const parsedActive = parseEnvelope(values.get(appearanceKeys.active))
+  const active = parsedActive
+    ? { ...parsedActive, config: themeNeutral(site, parsedActive.config) }
+    : { revision: 0, config: defaultAppearance(site) }
+  const parsedDraft = parseEnvelope(values.get(appearanceKeys.draft))
+  const draft = parsedDraft
+    ? { ...parsedDraft, config: themeNeutral(site, parsedDraft.config) }
+    : active
+  const parsedPrevious = parseEnvelope(values.get(appearanceKeys.previous))
+  const previous = parsedPrevious
+    ? { ...parsedPrevious, config: themeNeutral(site, parsedPrevious.config) }
+    : undefined
+  return { site, active, draft, previous }
 }
 
 async function write(options: OptionsApi, id: string, value: unknown) {
@@ -260,11 +283,17 @@ export async function saveAppearanceData(
   revision: number,
 ): Promise<AppearanceEnvelope> {
   await requireCapability('edit_theme_options')
-  const config = normalizedAppearance(value)
+  const submitted = normalizedAppearance(value)
   return withOptionsTransaction(async (tx, options) => {
     await lockAppearance(tx)
     const current = await documents(options)
     guardRevision(current.draft, revision)
+    // The draft owns theme chrome only. Accepting site or home routing fields
+    // from the browser would let a draft override core settings.
+    const config = appearanceChrome(
+      themeNeutral(current.site, current.draft.config),
+      submitted,
+    )
     const draft = { revision: current.draft.revision + 1, config }
     await write(options, appearanceKeys.draft, draft)
     return draft
@@ -279,16 +308,11 @@ export async function applyAppearanceData(revision: number): Promise<AppearanceE
     const current = await documents(options)
     guardRevision(current.draft, revision)
     await validateReferences(tx, current.draft.config)
-    const active = { revision: current.draft.revision + 1, config: current.draft.config }
+    const config = themeNeutral(current.site, current.draft.config)
+    const active = { revision: current.draft.revision + 1, config }
     await write(options, appearanceKeys.previous, current.active)
     await write(options, appearanceKeys.active, active)
     await write(options, appearanceKeys.draft, active)
-    await write(options, 'site', {
-      ...current.site,
-      ...active.config.site,
-      showOnFront: active.config.home.mode,
-      pageOnFront: active.config.home.pageId,
-    })
     return active
   })
 }
@@ -315,22 +339,19 @@ export async function restoreAppearanceData(revision: number): Promise<Appearanc
     if (!current.previous)
       throw new AppearanceValidationError('Belum ada tampilan sebelumnya untuk dipulihkan.')
     await validateReferences(tx, current.previous.config)
-    const active = { revision: current.draft.revision + 1, config: current.previous.config }
+    const config = themeNeutral(current.site, current.previous.config)
+    const active = { revision: current.draft.revision + 1, config }
     await write(options, appearanceKeys.previous, current.active)
     await write(options, appearanceKeys.active, active)
     await write(options, appearanceKeys.draft, active)
-    await write(options, 'site', {
-      ...current.site,
-      ...active.config.site,
-      showOnFront: active.config.home.mode,
-      pageOnFront: active.config.home.pageId,
-    })
     return active
   })
 }
 
 // Call inside the settings transaction before writing key "site". The shared lock
-// makes this atomic with draft/apply, and the bumped revision rejects stale tabs.
+// keeps this atomic with draft/apply, and the bumped revision rejects stale tabs.
+// Only the envelope copies are rewritten here; the core "site" option stays the
+// authority that the settings transaction writes last.
 export async function syncAppearanceSiteSettings(
   tx: AppearanceTransaction,
   site: SiteSettings,
@@ -338,65 +359,67 @@ export async function syncAppearanceSiteSettings(
   keys?: (keyof SiteSettings)[],
 ) {
   await lockAppearance(tx)
-  const current = await documents(options)
   const stored = await options.getOptions([appearanceKeys.active, appearanceKeys.draft])
-  const present = new Set(stored.keys())
   const updatedSite = appearanceSite(site)
-  const fieldKeys = keys?.filter((key) => key in updatedSite)
-  const reading = !keys || keys.includes('showOnFront') || keys.includes('postsPerPage')
-  if (reading) {
-    for (const [key, envelope] of [
-      [appearanceKeys.active, current.active],
-      [appearanceKeys.draft, current.draft],
-    ] as const) {
-      const config = {
-        ...envelope.config,
-        home: {
-          ...envelope.config.home,
-          mode: site.showOnFront,
-          pageId: site.pageOnFront,
-          sections: envelope.config.home.sections.map((section) =>
-            section.type === 'latest' ? { ...section, limit: site.postsPerPage } : section,
-          ),
-        },
-      }
-      await write(options, key, { revision: envelope.revision + 1, config })
-      envelope.config = config
-      envelope.revision++
-    }
-  }
-  if (fieldKeys && !fieldKeys.length) return
-  const patch = fieldKeys
-    ? Object.fromEntries(
-        fieldKeys.map((key) => [key, updatedSite[key as keyof typeof updatedSite]]),
-      )
-    : updatedSite
-  const changed = (config: Appearance) =>
-    Object.entries(patch).some(
-      ([key, value]) =>
-        JSON.stringify(config.site[key as keyof typeof config.site]) !== JSON.stringify(value),
+  const changedKeys = (keys ?? (Object.keys(updatedSite) as (keyof typeof updatedSite)[])).filter(
+    (key): key is keyof typeof updatedSite => key in updatedSite,
+  )
+  const homeChanged =
+    !keys ||
+    keys.some((key) => key === 'showOnFront' || key === 'pageOnFront' || key === 'postsPerPage')
+  for (const [key, value] of [
+    [appearanceKeys.active, stored.get(appearanceKeys.active)],
+    [appearanceKeys.draft, stored.get(appearanceKeys.draft)],
+  ] as const) {
+    if (!value) continue
+    const envelope = parseEnvelope(value)
+    if (!envelope) continue
+    const config = envelope.config
+    const copy = changedKeys.some(
+      (field) => JSON.stringify(config.site[field]) !== JSON.stringify(updatedSite[field]),
     )
-  if (present.has(appearanceKeys.active) && changed(current.active.config))
-    await write(options, appearanceKeys.active, {
-      revision: current.active.revision + 1,
-      config: { ...current.active.config, site: { ...current.active.config.site, ...patch } },
+    const home =
+      homeChanged &&
+      (config.home.mode !== site.showOnFront ||
+        config.home.pageId !== site.pageOnFront ||
+        config.home.sections.some(
+          (section) => section.type === 'latest' && section.limit !== site.postsPerPage,
+        ))
+    if (!copy && !home) continue
+    await write(options, key, {
+      revision: envelope.revision + 1,
+      config: {
+        ...config,
+        ...(copy && {
+          site: {
+            ...config.site,
+            ...Object.fromEntries(changedKeys.map((field) => [field, updatedSite[field]])),
+          },
+        }),
+        ...(home && {
+          home: {
+            ...config.home,
+            mode: site.showOnFront,
+            pageId: site.pageOnFront,
+            sections: config.home.sections.map((section) =>
+              section.type === 'latest' ? { ...section, limit: site.postsPerPage } : section,
+            ),
+          },
+        }),
+      },
     })
-  if (present.has(appearanceKeys.draft) && changed(current.draft.config))
-    await write(options, appearanceKeys.draft, {
-      revision: current.draft.revision + 1,
-      config: { ...current.draft.config, site: { ...current.draft.config.site, ...patch } },
-    })
+  }
 }
 
+// The appearance draft belongs to the active theme's chrome, not to a package
+// capability: identity, menu, footer, and social data live in the core "site"
+// option, which every theme reads. A theme switch is still a reason to reject.
 async function guardAppearanceTheme(tx: AppearanceTransaction, options: OptionsApi) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
   const theme = await getActiveTheme()
   const activeId = await options.getOption('active_theme')
-  if (
-    !theme.manifest.capabilities.includes('appearance-editor') ||
-    (typeof activeId === 'string' && normalizeThemeId(activeId) !== theme.manifest.id)
-  )
+  if (typeof activeId === 'string' && normalizeThemeId(activeId) !== theme.manifest.id)
     throw new AppearanceValidationError(
-      'Tema aktif sudah berubah. Aktifkan tema yang mendukung pengaturan ini sebelum menerapkan rancangan.',
+      'Tema aktif sudah berubah. Muat ulang editor sebelum menerapkan rancangan.',
     )
 }
