@@ -25,6 +25,7 @@ Isi di **Project Settings → Environment Variables** untuk environment
 | `NEXT_PUBLIC_SITE_URL`       | ya    | Origin produksi, mis. `https://contoh.com`. Dipakai untuk pemeriksaan versi. |
 | `BETTER_AUTH_URL`            | ya    | Origin yang sama dengan `NEXT_PUBLIC_SITE_URL`.                             |
 | `BETTER_AUTH_SECRET`         | ya    | `openssl rand -hex 32`, berbeda per environment.                            |
+| `NEXTPRESS_CLIENT_IP_HEADER` | ya    | `x-forwarded-for`; gunakan header satu IP yang ditimpa ingress Vercel.       |
 | `VERCEL_TOKEN`               | ya\*  | Token dengan izin membuat deployment pada proyek ini.                       |
 | `VERCEL_PROJECT_ID`          | ya\*  | ID proyek (`prj_…`).                                                        |
 | `VERCEL_REPO_ID`             | ya\*  | ID repository GitHub (`123456789`), bukan `owner/name`.                      |

@@ -5,6 +5,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { getDb } from '@/lib/db'
 import * as schema from '@/lib/db/auth-schema'
 import { getRequestRoles } from '@/lib/core/roles-server'
+import { clientIpHeader } from '@/lib/client-ip'
 
 let instance: ReturnType<typeof createAuth> | undefined
 function createAuth() {
@@ -54,7 +55,11 @@ function createAuth() {
       max: 100,
       customRules: { '/sign-in/email': { window: 60, max: 5 } },
     },
-    advanced: { cookiePrefix: 'nextpress', useSecureCookies: baseURL.startsWith('https://') },
+    advanced: {
+      cookiePrefix: 'nextpress',
+      useSecureCookies: baseURL.startsWith('https://'),
+      ipAddress: { ipAddressHeaders: [clientIpHeader()] },
+    },
   })
 }
 export function getAuth() {

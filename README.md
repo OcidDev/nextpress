@@ -3,6 +3,9 @@
 An open source content management system built with Next.js, TypeScript,
 PostgreSQL, Drizzle ORM, and Better Auth.
 
+Licensed under [GPL-3.0-only](LICENSE). Bundled fonts retain their SIL Open Font
+Licenses; see [font notices](public/fonts/NOTICE.txt).
+
 ## Features
 
 - Articles and pages with a rich text editor, image alignment, and sizing.
@@ -103,13 +106,41 @@ hosting provider to build that tag and commit. A job is marked done only when
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test:security
+pnpm audit --prod
 pnpm build
 pnpm start
 ```
 
 Configure environment variables and apply database migrations before deploying.
-Run these checks and manually verify changed workflows. No automated test suite
-is included.
+Run these checks and manually verify changed workflows. Browser tests require an isolated, migrated PostgreSQL database and a production
+build with `NEXT_PUBLIC_SITE_URL=http://localhost:3109`. The database test needs
+PostgreSQL client utilities (`pg_dump`, `pg_restore`, `psql`) and a test database
+role with `CREATEDB`; it creates and removes its own temporary databases:
+
+```bash
+TEST_DATABASE_URL=postgresql://user:password@localhost/nextpress_test pnpm test:db
+pnpm exec playwright install chromium
+TEST_DATABASE_URL=postgresql://user:password@localhost/nextpress_test pnpm test:e2e
+```
+
+The suite starts its own application on port 3109, creates disposable test
+accounts, and checks login with JavaScript enabled and disabled, CSRF, rate
+limits, anonymous access, editorial revisions/trash, media, import/export,
+themes, and plugins. Never point it at a production database. The database suite
+checks a populated upgrade, migration reruns and backup/restore (including media
+bytes and exclusion of sessions/tokens). CI runs these checks on Node.js 22.
+See [SECURITY.md](SECURITY.md) and the [release security review](docs/security-review-2026-10-18.md)
+for deployment requirements and remaining release checks. After deploying, run
+`pnpm release:verify https://your-domain.example` for read-only version, login-form,
+header and anonymous-access checks. Authenticated cookie flags, ingress IPs and
+optional Redis/provider integrations still need verification on the actual host.
+
+To reset an existing administrator's password, run
+`pnpm admin:reset --email=admin@example.com` and use the hidden password prompt.
+For automation, inject `ADMIN_EMAIL` and `NEW_ADMIN_PASSWORD` through your secret
+manager. Password arguments and default passwords are not supported. A reset
+revokes all sessions and preserves the account's role and active status.
 
 ## Database
 

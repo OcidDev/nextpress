@@ -132,6 +132,15 @@ export function createRoleRegistry(definitions: unknown = initialRoles()) {
   }
 }
 export type RoleRegistry = ReturnType<typeof createRoleRegistry>
+/** Managing an existing privileged account must be as strict as assigning its role. */
+export function canManageRole(actorRole: string, targetRole: string, roles: RoleRegistry) {
+  const actor = roles.get(actorRole)
+  const target = roles.get(targetRole)
+  if (!actor?.capabilities.includes('edit_users') || !target) return false
+  if (canonicalRole(actorRole) === 'administrator') return true
+  if (canonicalRole(targetRole) === 'administrator') return false
+  return target.capabilities.every((cap) => actor.capabilities.includes(cap))
+}
 export type Actor = { id: string; role: string; active: boolean }
 export type PermissionObject = {
   type: string

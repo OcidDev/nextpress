@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import { requireCapability } from '@/lib/admin'
 import { getDb } from '@/lib/db'
-import { user, account, session, authors, media, rateLimit } from '@/lib/db/schema'
-import { newId } from '@/lib/db/ids'
+import { user, account, session, authors, media } from '@/lib/db/schema'
+import { consumePasswordAttempt } from '@/lib/password-rate-limit'
 import { ensureUserAuthor } from './user-authors'
 
 const profileIdentitySchema = z.object({
@@ -25,38 +25,6 @@ const profilePasswordSchema = z.object({
   newPassword: z.string().min(12, 'Kata sandi baru minimal 12 karakter').max(128),
   confirmPassword: z.string().min(1, 'Konfirmasi kata sandi wajib diisi').max(128),
 })
-
-async function checkPasswordRateLimit(db: ReturnType<typeof getDb>, userId: string) {
-  const key = `pwd-check:${userId}`
-  const now = Date.now()
-  const [row] = await db.select().from(rateLimit).where(eq(rateLimit.key, key))
-  if (row && now - row.lastRequest < 60000 && row.count >= 5) {
-    throw new Error('Terlalu banyak percobaan kata sandi. Coba lagi dalam satu menit.')
-  }
-}
-
-async function recordFailedPasswordAttempt(db: ReturnType<typeof getDb>, userId: string) {
-  const key = `pwd-check:${userId}`
-  const now = Date.now()
-  const [row] = await db.select().from(rateLimit).where(eq(rateLimit.key, key))
-  if (!row || now - row.lastRequest >= 60000) {
-    if (row) {
-      await db.update(rateLimit).set({ count: 1, lastRequest: now }).where(eq(rateLimit.key, key))
-    } else {
-      await db.insert(rateLimit).values({ id: newId(), key, count: 1, lastRequest: now })
-    }
-  } else {
-    await db
-      .update(rateLimit)
-      .set({ count: row.count + 1, lastRequest: now })
-      .where(eq(rateLimit.key, key))
-  }
-}
-
-async function clearPasswordRateLimit(db: ReturnType<typeof getDb>, userId: string) {
-  const key = `pwd-check:${userId}`
-  await db.delete(rateLimit).where(eq(rateLimit.key, key))
-}
 
 export async function getPersonalProfile() {
   const sessionUser = await requireCapability('edit_profile')
@@ -143,7 +111,7 @@ export async function updatePersonalEmail(data: FormData) {
   const db = getDb()
   const userId = sessionUser.user.id
 
-  await checkPasswordRateLimit(db, userId)
+  await consumePasswordAttempt(db, userId)
 
   const [credential] = await db
     .select({ id: account.id, password: account.password })
@@ -157,14 +125,19 @@ export async function updatePersonalEmail(data: FormData) {
     password: input.currentPassword,
   })
   if (!valid) {
-    await recordFailedPasswordAttempt(db, userId)
     throw new Error('Kata sandi saat ini tidak sesuai')
   }
 
-  await clearPasswordRateLimit(db, userId)
-
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(78351021)`)
+
+    const [current] = await tx
+      .select({ password: account.password })
+      .from(account)
+      .where(eq(account.id, credential.id))
+      .for('update')
+    if (!current || current.password !== credential.password)
+      throw new Error('Kredensial telah berubah. Silakan masuk kembali.')
 
     const [dup] = await tx
       .select({ id: user.id })
@@ -193,7 +166,7 @@ export async function updatePersonalPassword(data: FormData) {
   const db = getDb()
   const userId = sessionUser.user.id
 
-  await checkPasswordRateLimit(db, userId)
+  await consumePasswordAttempt(db, userId)
 
   const [credential] = await db
     .select({ id: account.id, password: account.password })
@@ -207,16 +180,21 @@ export async function updatePersonalPassword(data: FormData) {
     password: input.currentPassword,
   })
   if (!valid) {
-    await recordFailedPasswordAttempt(db, userId)
     throw new Error('Kata sandi saat ini tidak sesuai')
   }
-
-  await clearPasswordRateLimit(db, userId)
 
   const hashedPassword = await hashPassword(input.newPassword)
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(78351021)`)
+
+    const [current] = await tx
+      .select({ password: account.password })
+      .from(account)
+      .where(eq(account.id, credential.id))
+      .for('update')
+    if (!current || current.password !== credential.password)
+      throw new Error('Kredensial telah berubah. Silakan masuk kembali.')
 
     await tx
       .update(account)

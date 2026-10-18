@@ -15,3 +15,5 @@ tsconfig.tsbuildinfo
 .env*
 !.env.example
 dist
+playwright-report/
+test-results/
