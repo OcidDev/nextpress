@@ -4,6 +4,7 @@ import { hasDatabase } from '@/lib/db'
 import { getSettings } from '@/lib/db/queries/settings'
 import { recordView } from '@/lib/db/queries/views'
 import { viewInputSchema, viewRequestOrigin } from '@/lib/views'
+import { clientIp } from '@/lib/client-ip'
 
 export const runtime = 'nodejs'
 const reply = (status: number) =>
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     return reply(204)
   const secret = process.env.BETTER_AUTH_SECRET
   if (!secret) return reply(503)
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim().slice(0, 200) || 'local'
+  const ip = clientIp(request.headers)
   const hash = (value: string) => createHmac('sha256', secret).update(value).digest('hex')
   try {
     const result = await recordView({ ...input, ipHash: hash(ip), pathHash: hash(input.path) })

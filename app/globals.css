@@ -64,7 +64,7 @@
   --fontH: var(--font-sans), Arial, Helvetica, sans-serif;
   --fontB: var(--font-sans), Arial, Helvetica, sans-serif;
   --fontBa: var(--font-sans), Arial, Helvetica, sans-serif;
-  --fontC: var(--font-mono), monospace;
+  --fontC: ui-monospace, SFMono-Regular, Consolas, monospace;
   --trans-1: all 0.1s ease;
   --trans-2: all 0.2s ease;
   --trans-3: all 0.3s ease;

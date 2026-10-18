@@ -126,7 +126,9 @@ user service dapat membaca `.env.local` dan menulis ke `.next/`.
 
 ## 6. Reverse proxy dan HTTPS
 
-Teruskan permintaan ke port 3000 dan pertahankan header asli. Contoh Nginx:
+Teruskan permintaan ke port 3000 yang hanya dapat diakses dari proxy/localhost.
+Set `NEXTPRESS_CLIENT_IP_HEADER=x-real-ip`. Proxy harus menimpa header IP, bukan
+meneruskan nilai kiriman klien. Contoh Nginx:
 
 ```nginx
 server {
@@ -138,6 +140,7 @@ server {
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
   }
 }
 ```

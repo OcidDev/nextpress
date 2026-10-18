@@ -55,7 +55,7 @@ export function parseBloggerXml(
   let postsCount = 0
   let pagesCount = 0
 
-  while ((match = entryRegex.exec(xmlContent)) !== null && items.length < maxItems) {
+  while ((match = entryRegex.exec(xmlContent)) !== null) {
     const entryXml = match[1]!
 
     // Determine entry type (post, page, comment, template, settings)
@@ -66,6 +66,10 @@ export function parseBloggerXml(
     if (!isPost && !isPage) {
       continue
     }
+    if (items.length >= maxItems)
+      throw new Error(
+        `Blogger maksimal ${maxItems} pos/laman. Pecah ekspor menjadi beberapa berkas.`,
+      )
 
     const type: 'post' | 'page' = isPage ? 'page' : 'post'
 
@@ -76,7 +80,9 @@ export function parseBloggerXml(
     const title = rawTitle || (type === 'page' ? 'Halaman Tanpa Judul' : 'Artikel Tanpa Judul')
 
     // Extract Content
-    const contentMatch = entryXml.match(/<content[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content>/i)
+    const contentMatch = entryXml.match(
+      /<content[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content>/i,
+    )
     let content = contentMatch ? contentMatch[1]!.trim() : ''
     content = decodeXmlEntities(content)
 
@@ -93,8 +99,9 @@ export function parseBloggerXml(
     const status: 'published' | 'draft' = isDraft ? 'draft' : 'published'
 
     // Extract Alternate Link & Slug
-    const linkMatch = entryXml.match(/<link[^>]*rel=['"]alternate['"][^>]*href=['"]([^'"]+)['"]/i)
-      || entryXml.match(/<link[^>]*href=['"]([^'"]+)['"][^>]*rel=['"]alternate['"]/i)
+    const linkMatch =
+      entryXml.match(/<link[^>]*rel=['"]alternate['"][^>]*href=['"]([^'"]+)['"]/i) ||
+      entryXml.match(/<link[^>]*href=['"]([^'"]+)['"][^>]*rel=['"]alternate['"]/i)
     const originalUrl = linkMatch ? linkMatch[1]!.trim() : undefined
 
     let slug = ''
@@ -125,7 +132,9 @@ export function parseBloggerXml(
     }
 
     // Extract Author
-    const authorMatch = entryXml.match(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/i)
+    const authorMatch = entryXml.match(
+      /<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/i,
+    )
     const authorName = authorMatch ? decodeXmlEntities(authorMatch[1]!.trim()) : undefined
 
     items.push({

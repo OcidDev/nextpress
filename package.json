@@ -1,6 +1,7 @@
 {
   "name": "nextpress",
-  "version": "0.2.0",
+  "version": "0.2.1",
+  "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,7 +23,11 @@
     "plugin:pack": "node scripts/package-plugin.mjs",
     "theme:pack": "tsx scripts/package-theme.ts",
     "release:pack": "node scripts/package-release.mjs",
-    "vercel-build": "node scripts/vercel-build.mjs"
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "test:security": "tsx --test tests/security.test.ts tests/import.test.ts",
+    "test:e2e": "playwright test",
+    "test:db": "tsx --test tests/database.test.ts",
+    "release:verify": "node scripts/verify-deployment.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.4",
@@ -49,6 +54,7 @@
   },
   "devDependencies": {
     "@next/env": "15.5.27",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.5.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.1.13",
@@ -62,5 +68,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.2"
   },
-  "packageManager": "pnpm@11.22.0"
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.0.0"
+  }
 }

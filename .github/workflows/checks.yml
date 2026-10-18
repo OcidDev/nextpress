@@ -1,0 +1,51 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nextpress
+          POSTGRES_PASSWORD: nextpress
+          POSTGRES_DB: nextpress_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nextpress"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://nextpress:nextpress@localhost:5432/nextpress_test
+      TEST_DATABASE_URL: postgresql://nextpress:nextpress@localhost:5432/nextpress_test
+      BETTER_AUTH_URL: http://localhost:3109
+      NEXT_PUBLIC_SITE_URL: http://localhost:3109
+      BETTER_AUTH_SECRET: ci-only-not-a-real-secret-000000000000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:security
+      - run: pnpm audit --prod
+      - run: pnpm db:migrate
+      - run: pnpm db:check
+      - run: pnpm test:db
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

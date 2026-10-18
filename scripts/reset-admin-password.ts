@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { hashPassword } from 'better-auth/crypto'
 import { eq, and, sql } from 'drizzle-orm'
+import { z } from 'zod'
+import { readPassword } from './password-prompt'
 
 const isProd = process.argv.includes('--prod') || process.argv.includes('--production')
 
@@ -21,7 +23,9 @@ if (isProd) {
   if (!process.env.DATABASE_URL) {
     console.error('DATABASE_URL untuk production tidak ditemukan.')
     console.error('Gunakan: DATABASE_URL="postgresql://..." pnpm admin:reset --prod')
-    console.error('atau pastikan .vercel/.env.production.local tersedia (jalankan: vercel env pull).')
+    console.error(
+      'atau pastikan .vercel/.env.production.local tersedia (jalankan: vercel env pull).',
+    )
     process.exit(1)
   }
 } else {
@@ -31,25 +35,26 @@ if (isProd) {
 const { getDb, getPool } = await import('../lib/db/index.js')
 const { user, account, session } = await import('../lib/db/auth-schema.js')
 
-// Baca argumen --password=... atau --email=...
-const passwordArg = process.argv.find((a) => a.startsWith('--password='))?.split('=')[1]
-const emailArg = process.argv.find((a) => a.startsWith('--email='))?.split('=')[1]
-
-const newPassword = passwordArg || process.env.NEW_ADMIN_PASSWORD || 'Admin#2026!SecureBlog'
-const targetEmail = (emailArg || process.env.ADMIN_EMAIL || 'rosyid.development@gmail.com').toLowerCase().trim()
-
-if (newPassword.length < 12) {
-  console.error('Kata sandi harus minimal 12 karakter.')
-  process.exit(1)
-}
+// Never accept secrets in argv (shell history / process listings) or supply defaults.
+if (process.argv.some((arg) => arg === '--password' || arg.startsWith('--password=')))
+  throw new Error('Gunakan prompt tersembunyi atau NEW_ADMIN_PASSWORD, bukan --password.')
+const emailArg = process.argv.find((arg) => arg.startsWith('--email='))?.slice('--email='.length)
+const targetEmail = z
+  .email()
+  .parse((emailArg || process.env.ADMIN_EMAIL || '').trim().toLowerCase())
+const newPassword = z
+  .string()
+  .min(12)
+  .max(128)
+  .parse(process.env.NEW_ADMIN_PASSWORD || (await readPassword()))
 
 console.log(`Menghubungkan ke database [${isProd ? 'PRODUCTION' : 'LOCAL'}]...`)
 
 const db = getDb()
 const [adminUser] = await db.select().from(user).where(eq(user.email, targetEmail))
 
-if (!adminUser) {
-  console.error(`User dengan email "${targetEmail}" tidak ditemukan di database.`)
+if (!adminUser || !['admin', 'administrator'].includes(adminUser.role)) {
+  console.error('Akun administrator dengan email tersebut tidak ditemukan.')
   await getPool().end()
   process.exit(1)
 }
@@ -59,11 +64,7 @@ const hashedPassword = await hashPassword(newPassword)
 await db.transaction(async (tx) => {
   await tx.execute(sql`select pg_advisory_xact_lock(78351021)`)
 
-  // Pastikan role administrator dan aktif
-  await tx
-    .update(user)
-    .set({ active: true, role: 'administrator', updatedAt: new Date() })
-    .where(eq(user.id, adminUser.id))
+  // Reset credentials only; preserve the account's role and active status.
 
   // Update password credential
   const updatedAccounts = await tx
@@ -87,17 +88,11 @@ await db.transaction(async (tx) => {
 
   // Bersihkan seluruh sesi lama
   await tx.delete(session).where(eq(session.userId, adminUser.id))
-
-  // Reset rate limit agar tidak terblokir
-  try {
-    await tx.execute(sql`TRUNCATE TABLE cms_rate_limit`)
-  } catch {
-    // abaikan jika tabel rate limit belum ada
-  }
 })
 
-console.log(`\n✔ Sukses! Password untuk ${targetEmail} di [${isProd ? 'PRODUCTION' : 'LOCAL'}] berhasil direset.`)
+console.log(
+  `\n✔ Sukses! Password untuk ${targetEmail} di [${isProd ? 'PRODUCTION' : 'LOCAL'}] berhasil direset.`,
+)
 console.log(`Email        : ${targetEmail}`)
-console.log(`Password Baru: ${newPassword}\n`)
 
 await getPool().end()
