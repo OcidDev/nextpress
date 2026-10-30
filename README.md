@@ -59,9 +59,9 @@ Install and manage packages from `/admin/appearance` (themes) and
 `lib/themes/package.ts` and `lib/plugins/manifest.ts`. A newly installed package
 starts inactive so its widget placements can be arranged before it goes live.
 
-Inactive themes can be deleted from the gallery. The active theme, the bundled
-recovery theme, and themes still used by a page template cannot be deleted; the
-gallery explains which pages block the removal. Deleting a theme removes only
+Inactive themes can be deleted from the gallery, including the bundled theme.
+The internal recovery copy is retained. The active theme and themes still used
+by a page template cannot be deleted; the gallery explains which pages block the removal. Deleting a theme removes only
 its package and its customizer settings. Plugins follow the same rule: disable
 the plugin first, then remove any widget placements and page templates that
 still reference it.
@@ -209,3 +209,5 @@ Media referenced by revision history cannot be deleted while those revisions exi
 
 Before deploying these changes, back up the database and run `pnpm db:migrate` and
 `pnpm db:check` before starting the new application build.
+
+See [theme, plugin, and core boundaries](docs/theme-plugin-core-boundaries.md) for customization, uninstall, and recovery behavior.

@@ -67,15 +67,13 @@ export async function activateThemeAction(themeId: string): Promise<ThemeActionR
   }
 }
 
-export async function deleteThemeAction(
-  themeId: string,
-  hash: string,
-): Promise<ThemeActionResult> {
+export async function deleteThemeAction(themeId: string, hash: string): Promise<ThemeActionResult> {
   await requireCapability('delete_themes')
 
   try {
     await deleteThemePackage(themeId, hash)
     revalidatePath('/admin/appearance', 'layout')
+    revalidatePath('/', 'layout')
     return { success: true, message: 'Tema dihapus.' }
   } catch (error) {
     return {

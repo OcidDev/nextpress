@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireCapability } from '@/lib/admin'
-import { getActiveThemeId, getThemePackage } from '@/lib/themes/manager'
+import { getActiveThemeId, getThemeForEditor } from '@/lib/themes/manager'
 import { getThemeCustomizationState } from '@/lib/themes/customization-server'
 import { ThemeCustomizer } from '@/components/admin/themes/ThemeCustomizer'
+import { ThemeSiteSettings } from '@/components/admin/themes/ThemeSiteSettings'
 import './site-editor.css'
 
 export default async function SiteEditor({
@@ -13,7 +14,7 @@ export default async function SiteEditor({
 }) {
   await requireCapability('edit_theme_options')
   const activeId = await getActiveThemeId()
-  const theme = await getThemePackage((await searchParams).theme || activeId)
+  const theme = await getThemeForEditor((await searchParams).theme || activeId)
   if (!theme) notFound()
   const active = theme.manifest.id === activeId
   return (
@@ -30,6 +31,7 @@ export default async function SiteEditor({
           Lihat situs ↗
         </Link>
       </header>
+      <ThemeSiteSettings />
       {theme.customization ? (
         <ThemeCustomizer
           themeId={theme.manifest.id}
@@ -43,8 +45,15 @@ export default async function SiteEditor({
       ) : (
         <div className="siteEditorEmpty">
           <h2>Desain</h2>
-          <p>Tema ini belum menyediakan kontrol penyesuaian.</p>
-          <Link href="/admin/settings/general">Identitas situs</Link>
+          <p>
+            Gunakan pengaturan situs di atas untuk mengubah identitas, menu, dan footer. Tema ini
+            belum menyediakan kontrol warna atau tata letak tambahan.
+          </p>
+          <iframe
+            title={`Pratinjau ${theme.manifest.name}`}
+            src={`/preview/theme/${theme.manifest.id}`}
+            style={{ width: '100%', height: '65vh', border: 0 }}
+          />
         </div>
       )}
     </main>

@@ -27,7 +27,8 @@
     "test:security": "tsx --test tests/security.test.ts tests/import.test.ts",
     "test:e2e": "playwright test",
     "test:db": "tsx --test tests/database.test.ts",
-    "release:verify": "node scripts/verify-deployment.mjs"
+    "release:verify": "node scripts/verify-deployment.mjs",
+    "test:themes": "tsx --test tests/theme-lifecycle.test.ts"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.4",

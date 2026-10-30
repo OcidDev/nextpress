@@ -20,6 +20,7 @@ export async function customizeTheme(input: z.infer<typeof inputSchema>) {
   try {
     const parsed = inputSchema.parse(input)
     const state = await changeThemeCustomization(parsed)
+    revalidatePath('/admin/site-editor')
     revalidatePath('/admin/appearance/customize')
     if (parsed.operation === 'apply') revalidatePath('/', 'layout')
     return { state }

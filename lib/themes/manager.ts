@@ -1,13 +1,15 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { requireCapability } from '@/lib/admin'
 import type { OptionsApi } from '@/lib/core/options'
 import { getRequestOptions, withOptionsTransaction } from '@/lib/core/options-server'
 import { getDb, hasDatabase } from '@/lib/db'
-import { options, pages } from '@/lib/db/schema'
+import { options } from '@/lib/db/schema'
 import { themePackages } from '@/lib/db/theme-schema'
 import bundledFiles from './bundled.generated.json'
+import { deleteThemeData, themeRemovalKey } from './deletion'
+export { ThemeDeletionError } from './deletion'
 import {
   readThemeZip,
   validateThemePackage,
@@ -37,8 +39,6 @@ export interface InstalledTheme {
   /** Set when the stored package no longer validates; it can only be deleted. */
   broken?: boolean
 }
-
-export class ThemeDeletionError extends Error {}
 
 export const getActiveThemeId = cache(async (): Promise<string> => {
   if (!hasDatabase()) return DEFAULT_THEME_ID
@@ -71,7 +71,10 @@ function missingTable(error: unknown): boolean {
 const installedPackages = cache(async () => {
   if (!hasDatabase()) return []
   try {
-    return await getDb().select().from(themePackages).orderBy(desc(themePackages.installedAt))
+    return await getDb()
+      .select()
+      .from(themePackages)
+      .orderBy(desc(themePackages.installedAt), desc(themePackages.hash))
   } catch (error) {
     // Built-in packages must still render during a rolling deployment before the
     // theme package table exists.
@@ -82,6 +85,12 @@ const installedPackages = cache(async () => {
 export const getThemePackage = cache(
   async (themeId: string, hash?: string): Promise<ThemePackage | undefined> => {
     const id = normalizeThemeId(themeId)
+    if (
+      !hash &&
+      hasDatabase() &&
+      (await getRequestOptions().getOption(themeRemovalKey(id))) === true
+    )
+      return undefined
     const row = (await installedPackages()).find(
       (row) => row.id === id && (!hash || row.hash === hash),
     )
@@ -132,6 +141,16 @@ export async function setActiveThemeId(themeId: string): Promise<void> {
   if (!theme) throw new Error('Tema belum terpasang atau paketnya tidak tersedia.')
   await withOptionsTransaction(async (tx, options) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
+    if ((await options.getOption(themeRemovalKey(theme.manifest.id))) === true)
+      throw new Error('Tema sudah dihapus. Muat ulang daftar tema.')
+    const [latest] = await tx
+      .select({ hash: themePackages.hash })
+      .from(themePackages)
+      .where(eq(themePackages.id, theme.manifest.id))
+      .orderBy(desc(themePackages.installedAt), desc(themePackages.hash))
+      .limit(1)
+    if (latest && latest.hash !== theme.hash)
+      throw new Error('Paket tema sudah diperbarui. Muat ulang daftar tema.')
     const current = await options.getOption('active_theme')
     if (typeof current === 'string' && normalizeThemeId(current) !== theme.manifest.id)
       await options.updateOption('previous_theme', normalizeThemeId(current))
@@ -141,13 +160,14 @@ export async function setActiveThemeId(themeId: string): Promise<void> {
 export async function listInstalledThemes(): Promise<InstalledTheme[]> {
   const active = await getActiveTheme()
   const ids = new Set([
+    active.manifest.id,
     ...bundled.map((p) => p.manifest.id),
     ...(await installedPackages()).map((p) => p.id),
   ])
   const themes: InstalledTheme[] = []
   for (const id of ids) {
     try {
-      const theme = await getThemePackage(id)
+      const theme = id === active.manifest.id ? active : await getThemePackage(id)
       if (!theme) continue
       themes.push({
         ...theme.manifest,
@@ -157,7 +177,7 @@ export async function listInstalledThemes(): Promise<InstalledTheme[]> {
           : '/images/placeholder.webp',
         isActive: id === active.manifest.id,
         isDefault: id === DEFAULT_THEME_ID,
-        supportsCustomizer: !!theme.customization,
+        supportsCustomizer: true,
       })
     } catch {
       // A broken package must stay visible so it can be deleted. Hiding it would
@@ -202,6 +222,7 @@ export async function installThemeFromZip(buffer: Buffer): Promise<{ id: string;
         .insert(themePackages)
         .values({ id: theme.manifest.id, hash: theme.hash, files: theme.files })
         .onConflictDoNothing()
+      await tx.delete(options).where(eq(options.name, themeRemovalKey(theme.manifest.id)))
     })
   } catch (error) {
     if (missingTable(error))
@@ -213,83 +234,24 @@ export async function installThemeFromZip(buffer: Buffer): Promise<{ id: string;
   return { id: theme.manifest.id, name: theme.manifest.name }
 }
 
-const pageTemplatePrefix = (themeId: string) => `theme:${themeId}:`
-
-/**
- * Delete an installed theme package.
- *
- * Mirrors the activation/install path: capability, id format, revision hash, and
- * the same advisory lock, all re-checked on the server. Bundled themes and the
- * active theme never leave through here, and pages still pointing at one of the
- * package's page templates block deletion instead of silently falling back.
- */
+/** Core lifecycle: themes and plugins never implement their own uninstall handler. */
 export async function deleteThemePackage(themeId: string, hash: string): Promise<void> {
   await requireCapability('delete_themes')
   if (!hasDatabase()) throw new Error('Database belum dikonfigurasi.')
-  if (!/^[a-z][a-z0-9-]{0,63}$/.test(themeId) || !/^[0-9a-f]{64}$/.test(hash))
-    throw new ThemeDeletionError('Permintaan hapus tema tidak valid.')
-  if (themeId === DEFAULT_THEME_ID)
-    throw new ThemeDeletionError('Tema pemulihan bawaan tidak dapat dihapus.')
-  await getDb().transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
-    const [row] = await tx.select().from(themePackages).where(eq(themePackages.id, themeId)).for('update')
-    if (!row) throw new ThemeDeletionError('Tema tidak ditemukan atau sudah dihapus.')
-    if (row.hash !== hash)
-      throw new ThemeDeletionError(
-        'Tema telah berubah sejak halaman dimuat. Muat ulang halaman dan coba lagi.',
-      )
-    const [storedActive] = await tx
-      .select({ value: options.value })
-      .from(options)
-      .where(eq(options.name, 'active_theme'))
-    const activeId = typeof storedActive?.value === 'string' ? storedActive.value.trim() : ''
-    const storedActiveTheme = activeId ? normalizeThemeId(activeId) === themeId : false
-    if (storedActiveTheme) {
-      // A package that no longer validates is not serving the site: the reader
-      // already falls back to the bundled theme. Deleting it must reset the
-      // pointer instead of being blocked by a choice the site cannot render.
-      let healthy = false
-      try {
-        healthy = validateThemePackage(row.files).manifest.id === themeId
-      } catch {
-        healthy = false
-      }
-      if (healthy)
-        throw new ThemeDeletionError(
-          'Tema yang sedang aktif tidak dapat dihapus. Aktifkan tema lain terlebih dahulu.',
-        )
-    }
-    const inUse = await tx
-      .select({ id: pages.id, title: pages.title, status: pages.status })
-      .from(pages)
-      .where(sql`${pages.pageTemplate} like ${pageTemplatePrefix(themeId) + '%'}`)
-    // Trash still counts: restoring it would otherwise silently drop the layout.
-    const blocking = inUse
-    if (blocking.length) {
-      const labels = { draft: 'draf', published: 'terbit', trash: 'Sampah' } as const
-      const names = blocking
-        .slice(0, 5)
-        .map((page) => `"${page.title}" (${labels[page.status as keyof typeof labels] ?? page.status})`)
-        .join(', ')
-      throw new ThemeDeletionError(
-        `Tema masih dipakai template halaman: ${names}${blocking.length > 5 ? ` dan ${blocking.length - 5} halaman lain` : ''}. Pilih template lain pada halaman tersebut sebelum menghapus tema.`,
-      )
-    }
-    const deleted = await tx
-      .delete(themePackages)
-      .where(and(eq(themePackages.id, themeId), eq(themePackages.hash, hash)))
-      .returning({ id: themePackages.id })
-    if (!deleted.length) throw new ThemeDeletionError('Tema tidak ditemukan atau sudah dihapus.')
-    // Site data lives in the core "site" option, so only the package's own
-    // customization record is removed. Pages, menus, and appearance revisions stay.
-    await tx.delete(options).where(eq(options.name, `theme:${themeId}:customization`))
-    if (storedActiveTheme)
-      await tx
-        .update(options)
-        .set({ value: DEFAULT_THEME_ID, updatedAt: new Date() })
-        .where(eq(options.name, 'active_theme'))
+  await withOptionsTransaction(async (tx, options) => {
+    await initializeActiveTheme(tx, options)
+    await deleteThemeData(tx, options, themeId, hash, bundled)
   })
 }
+
+/** Keep internal recovery available to the editor preview after uninstalling its gallery entry. */
+export async function getThemeForEditor(themeId: string) {
+  const theme = await getThemePackage(themeId)
+  if (theme) return theme
+  const active = await getActiveTheme()
+  return active.manifest.id === normalizeThemeId(themeId) ? active : undefined
+}
+
 export async function readThemeAsset(id: string, hash: string, name: string) {
   // Assets from immutable old revisions remain available, not just the active revision.
   const theme = await getThemePackage(id, hash)
