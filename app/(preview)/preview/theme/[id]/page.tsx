@@ -1,3 +1,4 @@
+import { getAppearance } from '@/lib/db/queries/appearance'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { requireCapability } from '@/lib/admin'
@@ -22,7 +23,10 @@ export default async function ThemePreview({
   const theme = await getThemeForEditor((await params).id)
   if (!theme) notFound()
   const input = await searchParams
-  const preview = await themePreviewContext(input.path)
+  const preview = await themePreviewContext(
+    input.path,
+    await getAppearance(theme, input.draft === '1'),
+  )
   return (
     <>
       <PreviewNavigation

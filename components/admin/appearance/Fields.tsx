@@ -396,8 +396,9 @@ export function StyleFields({
         onChange={(fontSize) => onChange({ ...config, style: { ...config.style, fontSize } })}
       />
       <p className="appearanceHint">
-        Mode bawaan dan palet warna diatur di Pengaturan → Membaca. Pembaca tetap dapat memilih
-        mode dan palet sendiri jika kontrol tema ditampilkan.
+        Mode bawaan dan palet warna diatur di{' '}
+        <Link href="/admin/settings/reading">Pengaturan → Membaca</Link>. Pembaca tetap dapat
+        memilih mode dan palet sendiri jika kontrol tema ditampilkan.
       </p>
       <h3>Tindakan kartu artikel</h3>
       <ToggleField
@@ -679,7 +680,9 @@ export function HomeFields({
         <button
           type="button"
           disabled={home.sections.length >= 20 || (newType === 'latest' && hasLatest)}
-          onClick={() => onChange({ ...home, sections: [...home.sections, createSection(newType)] })}
+          onClick={() =>
+            onChange({ ...home, sections: [...home.sections, createSection(newType)] })
+          }
         >
           Tambah bagian
         </button>
@@ -848,7 +851,7 @@ function WidgetFields({
         />
       )}
       {widget.type === 'social' && (
-        <p className="appearanceHint">Tautan sosial diatur melalui tab Menu.</p>
+        <p className="appearanceHint">Tautan sosial diatur di Pengaturan → Tautan sosial.</p>
       )}
       {widget.type === 'about' && (
         <p className="appearanceHint">Isi kosong memakai deskripsi situs.</p>

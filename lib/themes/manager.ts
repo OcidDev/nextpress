@@ -1,3 +1,4 @@
+import { claimLegacyAppearance } from './layout-storage'
 import 'server-only'
 import { cache } from 'react'
 import { desc, eq, sql } from 'drizzle-orm'
@@ -151,6 +152,8 @@ export async function setActiveThemeId(themeId: string): Promise<void> {
       .limit(1)
     if (latest && latest.hash !== theme.hash)
       throw new Error('Paket tema sudah diperbarui. Muat ulang daftar tema.')
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
+    await claimLegacyAppearance(options)
     const current = await options.getOption('active_theme')
     if (typeof current === 'string' && normalizeThemeId(current) !== theme.manifest.id)
       await options.updateOption('previous_theme', normalizeThemeId(current))
@@ -216,8 +219,10 @@ export async function installThemeFromZip(buffer: Buffer): Promise<{ id: string;
     throw new Error('Gunakan ID core-default untuk paket Twenty Twenty-Four.')
   try {
     // Immutable revisions keep old asset URLs valid after an update.
-    await getDb().transaction(async (tx) => {
+    await withOptionsTransaction(async (tx, optionApi) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
+      await claimLegacyAppearance(optionApi)
       await tx
         .insert(themePackages)
         .values({ id: theme.manifest.id, hash: theme.hash, files: theme.files })

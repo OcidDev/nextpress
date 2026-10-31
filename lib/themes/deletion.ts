@@ -1,3 +1,4 @@
+import { themeAppearanceKeys, claimLegacyAppearance } from './layout-storage'
 import { desc, eq, sql } from 'drizzle-orm'
 import type { getDb } from '@/lib/db'
 import type { OptionsApi } from '@/lib/core/options'
@@ -74,6 +75,9 @@ export async function deleteThemeData(
       `Tema masih dipakai template halaman: ${names}${inUse.length > 5 ? ` dan ${inUse.length - 5} halaman lain` : ''}. Pilih template lain pada halaman tersebut sebelum menghapus tema.`,
     )
   }
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-appearance'))`)
+  await claimLegacyAppearance(options)
+  for (const key of Object.values(themeAppearanceKeys(themeId))) await options.deleteOption(key)
   // Uninstall all immutable revisions, otherwise an older package reappears.
   await tx.delete(themePackages).where(eq(themePackages.id, themeId))
   await options.deleteOption(`theme:${themeId}:customization`)

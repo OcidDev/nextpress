@@ -1,4 +1,13 @@
-import { getActiveTheme, normalizeThemeId } from '@/lib/themes/manager'
+import {
+  readLayoutDocuments,
+  writeLayoutEnvelope,
+  claimLegacyAppearance,
+} from '@/lib/themes/layout-storage'
+import { permittedLayout, type ThemeLayout } from '@/lib/themes/layout'
+import { themePackages } from '@/lib/db/theme-schema'
+import { desc } from 'drizzle-orm'
+import type { ThemePackage } from '@/lib/themes/package'
+import { getActiveTheme, getThemeForEditor, normalizeThemeId } from '@/lib/themes/manager'
 import 'server-only'
 import { and, eq, inArray, lte, sql } from 'drizzle-orm'
 import { requireCapability } from '@/lib/admin'
@@ -12,7 +21,7 @@ import {
   type AppearanceEnvelope,
 } from '@/lib/content/appearance'
 import { cleanHtml } from '@/lib/content/sanitize'
-import { defaultSettings, settingsSchema, type SiteSettings } from '@/lib/content/settings'
+import { type SiteSettings } from '@/lib/content/settings'
 import { getDb, hasDatabase } from '@/lib/db'
 import { authors, categories, media, pages, posts, plugins } from '@/lib/db/schema'
 import { getPluginChoices } from '@/lib/db/queries/plugins'
@@ -30,7 +39,11 @@ export type AppearanceTransaction = Parameters<
   Parameters<ReturnType<typeof getDb>['transaction']>[0]
 >[0]
 
+export type AppearanceTarget = { themeId: string; hash: string; activeThemeId: string }
+
 export type AppearanceEditorData = {
+  target?: AppearanceTarget
+  layout?: ThemeLayout
   draft: AppearanceEnvelope
   active: AppearanceEnvelope
   hasPrevious: boolean
@@ -69,27 +82,8 @@ function themeNeutral(site: SiteSettings, config: Appearance): Appearance {
   }
 }
 
-async function documents(options: OptionsApi) {
-  const values = await options.getOptions(['site', ...Object.values(appearanceKeys)])
-  const parsedSite = settingsSchema.safeParse(values.get('site'))
-  const site = parsedSite.success ? parsedSite.data : defaultSettings()
-  const parsedActive = parseEnvelope(values.get(appearanceKeys.active))
-  const active = parsedActive
-    ? { ...parsedActive, config: themeNeutral(site, parsedActive.config) }
-    : { revision: 0, config: defaultAppearance(site) }
-  const parsedDraft = parseEnvelope(values.get(appearanceKeys.draft))
-  const draft = parsedDraft
-    ? { ...parsedDraft, config: themeNeutral(site, parsedDraft.config) }
-    : active
-  const parsedPrevious = parseEnvelope(values.get(appearanceKeys.previous))
-  const previous = parsedPrevious
-    ? { ...parsedPrevious, config: themeNeutral(site, parsedPrevious.config) }
-    : undefined
-  return { site, active, draft, previous }
-}
-
-async function write(options: OptionsApi, id: string, value: unknown) {
-  await options.updateOption(id, value)
+async function documents(options: OptionsApi, theme?: ThemePackage) {
+  return readLayoutDocuments(options, theme ?? (await getActiveTheme()))
 }
 
 function guardRevision(current: AppearanceEnvelope, revision: number) {
@@ -232,17 +226,18 @@ async function validateReferences(tx: AppearanceTransaction, config: Appearance)
   }
 }
 
-export async function getAppearance(): Promise<Appearance> {
+export async function getAppearance(theme?: ThemePackage, draft = false): Promise<Appearance> {
   if (!hasDatabase()) return defaultAppearance()
-  return (await documents(getRequestOptions())).active.config
+  const current = await documents(getRequestOptions(), theme)
+  return (draft ? current.draft : current.active).config
 }
 
-export async function getAppearanceEditor(): Promise<AppearanceEditorData> {
+export async function getAppearanceEditor(theme?: ThemePackage): Promise<AppearanceEditorData> {
   await requireCapability('edit_theme_options')
   const db = getDb()
   const [current, postChoices, pageChoices, authorChoices, categoryChoices, pluginChoices] =
     await Promise.all([
-      documents(getRequestOptions()),
+      documents(getRequestOptions(), theme),
       db
         .select({ id: posts.id, title: posts.title, slug: posts.slug })
         .from(posts)
@@ -260,8 +255,18 @@ export async function getAppearanceEditor(): Promise<AppearanceEditorData> {
         .orderBy(categories.name),
       getPluginChoices(),
     ])
-  const settings = settingsSchema.parse(await getRequestOptions().getOption('site'))
+  const settings = current.site
   return {
+    ...(theme && {
+      target: {
+        themeId: theme.manifest.id,
+        hash: theme.hash,
+        activeThemeId: String(
+          (await getRequestOptions().getOption('active_theme')) || 'core-default',
+        ),
+      },
+      layout: theme.layout,
+    }),
     draft: current.draft,
     active: current.active,
     hasPrevious: Boolean(current.previous),
@@ -281,69 +286,94 @@ export async function getAppearanceEditor(): Promise<AppearanceEditorData> {
 export async function saveAppearanceData(
   value: unknown,
   revision: number,
+  target?: AppearanceTarget,
 ): Promise<AppearanceEnvelope> {
   await requireCapability('edit_theme_options')
   const submitted = normalizedAppearance(value)
   return withOptionsTransaction(async (tx, options) => {
+    const theme = await guardAppearanceTheme(tx, options, target)
     await lockAppearance(tx)
-    const current = await documents(options)
+    await claimLegacyAppearance(options)
+    const current = await documents(options, theme)
     guardRevision(current.draft, revision)
     // The draft owns theme chrome only. Accepting site or home routing fields
     // from the browser would let a draft override core settings.
-    const config = appearanceChrome(
-      themeNeutral(current.site, current.draft.config),
-      submitted,
-    )
+    const config = theme.layout
+      ? permittedLayout(current.draft.config, submitted, theme.layout)
+      : appearanceChrome(themeNeutral(current.site, current.draft.config), submitted)
     const draft = { revision: current.draft.revision + 1, config }
-    await write(options, appearanceKeys.draft, draft)
+    await writeLayoutEnvelope(options, current.keys.draft, draft)
     return draft
   })
 }
 
-export async function applyAppearanceData(revision: number): Promise<AppearanceEnvelope> {
+export async function applyAppearanceData(
+  revision: number,
+  target?: AppearanceTarget,
+): Promise<AppearanceEnvelope> {
   await requireCapability('edit_theme_options')
   return withOptionsTransaction(async (tx, options) => {
-    await guardAppearanceTheme(tx, options)
+    const theme = await guardAppearanceTheme(tx, options, target)
     await lockAppearance(tx)
-    const current = await documents(options)
+    await claimLegacyAppearance(options)
+    const current = await documents(options, theme)
     guardRevision(current.draft, revision)
+    if (
+      theme.manifest.id !==
+      normalizeThemeId(String((await options.getOption('active_theme')) || 'core-default'))
+    )
+      throw new AppearanceValidationError('Aktifkan tema sebelum menerapkan rancangan ke situs.')
     await validateReferences(tx, current.draft.config)
     const config = themeNeutral(current.site, current.draft.config)
     const active = { revision: current.draft.revision + 1, config }
-    await write(options, appearanceKeys.previous, current.active)
-    await write(options, appearanceKeys.active, active)
-    await write(options, appearanceKeys.draft, active)
+    await writeLayoutEnvelope(options, current.keys.previous, current.active)
+    await writeLayoutEnvelope(options, current.keys.active, active)
+    await writeLayoutEnvelope(options, current.keys.draft, active)
     return active
   })
 }
 
-export async function discardAppearanceData(revision: number): Promise<AppearanceEnvelope> {
+export async function discardAppearanceData(
+  revision: number,
+  target?: AppearanceTarget,
+): Promise<AppearanceEnvelope> {
   await requireCapability('edit_theme_options')
   return withOptionsTransaction(async (tx, options) => {
+    const theme = await guardAppearanceTheme(tx, options, target)
     await lockAppearance(tx)
-    const current = await documents(options)
+    await claimLegacyAppearance(options)
+    const current = await documents(options, theme)
     guardRevision(current.draft, revision)
     const draft = { revision: current.draft.revision + 1, config: current.active.config }
-    await write(options, appearanceKeys.draft, draft)
+    await writeLayoutEnvelope(options, current.keys.draft, draft)
     return draft
   })
 }
 
-export async function restoreAppearanceData(revision: number): Promise<AppearanceEnvelope> {
+export async function restoreAppearanceData(
+  revision: number,
+  target?: AppearanceTarget,
+): Promise<AppearanceEnvelope> {
   await requireCapability('edit_theme_options')
   return withOptionsTransaction(async (tx, options) => {
-    await guardAppearanceTheme(tx, options)
+    const theme = await guardAppearanceTheme(tx, options, target)
     await lockAppearance(tx)
-    const current = await documents(options)
+    await claimLegacyAppearance(options)
+    const current = await documents(options, theme)
     guardRevision(current.draft, revision)
     if (!current.previous)
       throw new AppearanceValidationError('Belum ada tampilan sebelumnya untuk dipulihkan.')
+    if (
+      theme.manifest.id !==
+      normalizeThemeId(String((await options.getOption('active_theme')) || 'core-default'))
+    )
+      throw new AppearanceValidationError('Aktifkan tema sebelum menerapkan rancangan ke situs.')
     await validateReferences(tx, current.previous.config)
     const config = themeNeutral(current.site, current.previous.config)
     const active = { revision: current.draft.revision + 1, config }
-    await write(options, appearanceKeys.previous, current.active)
-    await write(options, appearanceKeys.active, active)
-    await write(options, appearanceKeys.draft, active)
+    await writeLayoutEnvelope(options, current.keys.previous, current.active)
+    await writeLayoutEnvelope(options, current.keys.active, active)
+    await writeLayoutEnvelope(options, current.keys.draft, active)
     return active
   })
 }
@@ -386,7 +416,7 @@ export async function syncAppearanceSiteSettings(
           (section) => section.type === 'latest' && section.limit !== site.postsPerPage,
         ))
     if (!copy && !home) continue
-    await write(options, key, {
+    await options.updateOption(key, {
       revision: envelope.revision + 1,
       config: {
         ...config,
@@ -411,15 +441,31 @@ export async function syncAppearanceSiteSettings(
   }
 }
 
-// The appearance draft belongs to the active theme's chrome, not to a package
-// capability: identity, menu, footer, and social data live in the core "site"
-// option, which every theme reads. A theme switch is still a reason to reject.
-async function guardAppearanceTheme(tx: AppearanceTransaction, options: OptionsApi) {
+// Lock before reading the mutable installation state. Browser writes bind both
+// package hash and active choice, so stale tabs cannot publish another theme.
+async function guardAppearanceTheme(
+  tx: AppearanceTransaction,
+  options: OptionsApi,
+  target?: AppearanceTarget,
+) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
-  const theme = await getActiveTheme()
-  const activeId = await options.getOption('active_theme')
-  if (typeof activeId === 'string' && normalizeThemeId(activeId) !== theme.manifest.id)
-    throw new AppearanceValidationError(
-      'Tema aktif sudah berubah. Muat ulang editor sebelum menerapkan rancangan.',
-    )
+  const theme = target ? await getThemeForEditor(target.themeId) : await getActiveTheme()
+  if (!theme || (target && (!theme.layout || theme.hash !== target.hash)))
+    throw new AppearanceValidationError('Paket tema sudah berubah. Muat ulang editor.')
+  if (await options.getOption(`theme:${theme.manifest.id}:uninstalled`))
+    throw new AppearanceValidationError('Tema sudah dihapus. Muat ulang daftar tema.')
+  const activeId = normalizeThemeId(
+    String((await options.getOption('active_theme')) || 'core-default'),
+  )
+  if (target && activeId !== normalizeThemeId(target.activeThemeId))
+    throw new AppearanceValidationError('Tema aktif sudah berubah. Muat ulang editor.')
+  const [latest] = await tx
+    .select({ hash: themePackages.hash })
+    .from(themePackages)
+    .where(eq(themePackages.id, theme.manifest.id))
+    .orderBy(desc(themePackages.installedAt), desc(themePackages.hash))
+    .limit(1)
+  if (latest && latest.hash !== theme.hash)
+    throw new AppearanceValidationError('Paket tema sudah diperbarui. Muat ulang editor.')
+  return theme
 }

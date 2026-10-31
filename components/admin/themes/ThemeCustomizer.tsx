@@ -36,8 +36,11 @@ export function ThemeCustomizer({
     )
   const [state, setState] = useState(initial)
   const [values, setValues] = useState(() =>
-    resolveThemeValues(config, initial.draft ?? initial.active),
+    config.inheritDefaults
+      ? (initial.draft ?? initial.active)
+      : resolveThemeValues(config, initial.draft ?? initial.active),
   )
+  const displayed = resolveThemeValues(config, values)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
@@ -82,7 +85,11 @@ export function ThemeCustomizer({
           return
         }
         setState(result.state)
-        setValues(resolveThemeValues(config, result.state.draft ?? result.state.active))
+        setValues(
+          config.inheritDefaults
+            ? (result.state.draft ?? result.state.active)
+            : resolveThemeValues(config, result.state.draft ?? result.state.active),
+        )
         setDirty(false)
         setMessage(
           operation === 'save'
@@ -183,7 +190,7 @@ export function ThemeCustomizer({
                       {control.type === 'select' ? (
                         <select
                           id={`theme-setting-${control.id}`}
-                          value={values[control.id]}
+                          value={displayed[control.id]}
                           onChange={(e) => change({ ...values, [control.id]: e.target.value })}
                         >
                           {control.options.map((option) => (
@@ -197,10 +204,10 @@ export function ThemeCustomizer({
                           <input
                             id={`theme-setting-${control.id}`}
                             type="color"
-                            value={String(values[control.id])}
+                            value={String(displayed[control.id])}
                             onChange={(e) => change({ ...values, [control.id]: e.target.value })}
                           />
-                          <span>{values[control.id]}</span>
+                          <span>{displayed[control.id]}</span>
                         </div>
                       ) : (
                         <div>
@@ -210,13 +217,13 @@ export function ThemeCustomizer({
                             min={control.min}
                             max={control.max}
                             step={control.step}
-                            value={values[control.id]}
+                            value={displayed[control.id]}
                             onChange={(e) =>
                               change({ ...values, [control.id]: Number(e.target.value) })
                             }
                           />
                           <output htmlFor={`theme-setting-${control.id}`}>
-                            {values[control.id]}
+                            {displayed[control.id]}
                             {control.unit}
                           </output>
                         </div>
@@ -229,7 +236,7 @@ export function ThemeCustomizer({
             type="button"
             className="button"
             disabled={pending}
-            onClick={() => change(resolveThemeValues(config))}
+            onClick={() => change(config.inheritDefaults ? {} : resolveThemeValues(config))}
           >
             Kembalikan gaya bawaan
           </button>

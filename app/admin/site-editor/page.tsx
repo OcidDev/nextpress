@@ -1,3 +1,5 @@
+import { AppearanceEditor } from '@/components/admin/AppearanceEditor'
+import { getAppearanceEditor } from '@/lib/db/queries/appearance'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireCapability } from '@/lib/admin'
@@ -10,11 +12,12 @@ import './site-editor.css'
 export default async function SiteEditor({
   searchParams,
 }: {
-  searchParams: Promise<{ theme?: string }>
+  searchParams: Promise<{ theme?: string; panel?: string }>
 }) {
   await requireCapability('edit_theme_options')
+  const params = await searchParams
   const activeId = await getActiveThemeId()
-  const theme = await getThemeForEditor((await searchParams).theme || activeId)
+  const theme = await getThemeForEditor(params.theme || activeId)
   if (!theme) notFound()
   const active = theme.manifest.id === activeId
   return (
@@ -32,7 +35,32 @@ export default async function SiteEditor({
         </Link>
       </header>
       <ThemeSiteSettings />
-      {theme.customization ? (
+      {theme.layout && (
+        <nav className="adminActions" aria-label="Panel tema">
+          <Link
+            className="button secondary"
+            href={`/admin/site-editor?theme=${theme.manifest.id}&panel=layout`}
+          >
+            Susunan dan fitur
+          </Link>
+          {theme.customization && (
+            <Link
+              className="button secondary"
+              href={`/admin/site-editor?theme=${theme.manifest.id}&panel=design`}
+            >
+              Warna dan tipografi
+            </Link>
+          )}
+        </nav>
+      )}
+      {theme.layout && params.panel !== 'design' ? (
+        <AppearanceEditor
+          key={theme.hash}
+          editor={await getAppearanceEditor(theme)}
+          standalone
+          isActive={active}
+        />
+      ) : theme.customization ? (
         <ThemeCustomizer
           themeId={theme.manifest.id}
           name={theme.manifest.name}

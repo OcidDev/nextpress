@@ -2,11 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef, useState } from 'react'
-import {
-  appearancePreset,
-  type Appearance,
-  type AppearanceActionState,
-} from '@/lib/content/appearance'
+import { type AppearanceActionState } from '@/lib/content/appearance'
 import type { AppearanceEditorData } from '@/lib/db/queries/appearance'
 import {
   applyAppearance,
@@ -25,7 +21,7 @@ import {
 } from './appearance/Fields'
 import { EyeIcon, SettingsIcon } from '@/components/ui/icons'
 
-const tabs = [
+const allTabs = [
   ['style', 'Gaya'],
   ['header', 'Header'],
   ['home', 'Beranda'],
@@ -33,7 +29,7 @@ const tabs = [
   ['sidebar', 'Sidebar'],
   ['footer', 'Footer'],
 ] as const
-type Tab = (typeof tabs)[number][0]
+type Tab = (typeof allTabs)[number][0]
 type Operation = 'save' | 'apply' | 'discard' | 'restore'
 
 export function AppearanceEditor({
@@ -45,10 +41,11 @@ export function AppearanceEditor({
   standalone?: boolean
   isActive?: boolean
 }) {
+  const tabs = allTabs.filter(([id]) => !editor.layout || editor.layout.panels.includes(id))
   const [config, setConfig] = useState(editor.draft.config)
   const [revision, setRevision] = useState(editor.draft.revision)
   const [savedJson, setSavedJson] = useState(JSON.stringify(editor.draft.config))
-  const [tab, setTab] = useState<Tab>('style')
+  const [tab, setTab] = useState<Tab>(tabs[0]![0])
   const [mobileView, setMobileView] = useState<'settings' | 'preview'>('settings')
   const [previewWidth, setPreviewWidth] = useState(1440)
   const [previewAvailableWidth, setPreviewAvailableWidth] = useState(500)
@@ -179,14 +176,18 @@ export function AppearanceEditor({
     }
   }, [dirty])
 
-  function choosePreset(preset: Appearance['preset']) {
+  function choosePreset(preset: NonNullable<AppearanceEditorData['layout']>['presets'][number]) {
     if (
       !window.confirm(
         'Preset akan mengganti susunan bagian, widget, dan gaya rancangan. Identitas, menu, dan tautan situs tetap dipakai. Lanjutkan?',
       )
     )
       return
-    setConfig(appearancePreset(preset, config))
+    setConfig({
+      ...preset.config,
+      site: config.site,
+      home: { ...preset.config.home, mode: config.home.mode, pageId: config.home.pageId },
+    })
   }
 
   function fieldContent() {
@@ -286,7 +287,9 @@ export function AppearanceEditor({
         return []
       }),
   ]
-  const previewUrl = `/admin/appearance/preview?revision=${revision}&refresh=${previewNonce}`
+  const previewUrl = editor.target
+    ? `/preview/theme/${editor.target.themeId}?draft=1&revision=${revision}&refresh=${previewNonce}`
+    : `/admin/appearance/preview?revision=${revision}&refresh=${previewNonce}`
   const previewScale = Math.min(1, Math.max(0.1, previewAvailableWidth / previewWidth))
   const serverChanged = editor.draft.revision !== revision && !busy
 
@@ -323,12 +326,18 @@ export function AppearanceEditor({
           <form action={saveAction} onSubmit={() => setOperation('save')}>
             <input type="hidden" name="config" value={json} />
             <input type="hidden" name="revision" value={revision} />
+            <input type="hidden" name="themeId" value={editor.target?.themeId ?? ''} />
+            <input type="hidden" name="hash" value={editor.target?.hash ?? ''} />
+            <input type="hidden" name="activeThemeId" value={editor.target?.activeThemeId ?? ''} />
             <button type="submit" disabled={busy || !dirty}>
               {saving ? 'Menyimpan…' : 'Simpan rancangan'}
             </button>
           </form>
           <form action={applyAction} onSubmit={() => setOperation('apply')}>
             <input type="hidden" name="revision" value={revision} />
+            <input type="hidden" name="themeId" value={editor.target?.themeId ?? ''} />
+            <input type="hidden" name="hash" value={editor.target?.hash ?? ''} />
+            <input type="hidden" name="activeThemeId" value={editor.target?.activeThemeId ?? ''} />
             <button
               type="submit"
               className="button"
@@ -431,22 +440,14 @@ export function AppearanceEditor({
             <div>
               <p>Preset mengganti susunan rancangan. Terapkan untuk mengubah situs.</p>
               <div className="appearancePresetButtons">
-                {(
-                  [
-                    ['blog', 'Blog standar'],
-                    ['magazine', 'Majalah'],
-                    ['minimal', 'Minimal'],
-                    ['reference', 'Referensi'],
-                  ] as const
-                ).map(([value, label]) => (
+                {(editor.layout?.presets ?? []).map((preset) => (
                   <button
                     type="button"
-                    key={value}
+                    key={preset.id}
                     disabled={busy}
-                    aria-pressed={config.preset === value}
-                    onClick={() => choosePreset(value)}
+                    onClick={() => choosePreset(preset)}
                   >
-                    {label}
+                    {preset.name}
                   </button>
                 ))}
               </div>
@@ -523,6 +524,13 @@ export function AppearanceEditor({
                 }}
               >
                 <input type="hidden" name="revision" value={revision} />
+                <input type="hidden" name="themeId" value={editor.target?.themeId ?? ''} />
+                <input type="hidden" name="hash" value={editor.target?.hash ?? ''} />
+                <input
+                  type="hidden"
+                  name="activeThemeId"
+                  value={editor.target?.activeThemeId ?? ''}
+                />
                 <button type="submit" disabled={busy || (!dirty && !pendingApply)}>
                   Buang rancangan
                 </button>
@@ -544,6 +552,13 @@ export function AppearanceEditor({
                 }}
               >
                 <input type="hidden" name="revision" value={revision} />
+                <input type="hidden" name="themeId" value={editor.target?.themeId ?? ''} />
+                <input type="hidden" name="hash" value={editor.target?.hash ?? ''} />
+                <input
+                  type="hidden"
+                  name="activeThemeId"
+                  value={editor.target?.activeThemeId ?? ''}
+                />
                 <button type="submit" disabled={busy || !editor.hasPrevious || !isActive}>
                   Pulihkan tampilan sebelumnya
                 </button>

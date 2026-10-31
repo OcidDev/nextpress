@@ -25,6 +25,9 @@ export function ThemeLivePreview({
       try {
         const values = validateThemeValues(config, event.data.values)
         const root = document.querySelector<HTMLElement>('[data-theme-package]')
+        for (const control of config.controls)
+          for (const key of [`--theme--custom--${control.id}`, ...(control.cssProperties ?? [])])
+            root?.style.removeProperty(key)
         for (const [key, value] of Object.entries(themeCustomizationStyle(config, values)))
           root?.style.setProperty(key, value)
       } catch {

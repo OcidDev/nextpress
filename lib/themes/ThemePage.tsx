@@ -36,11 +36,8 @@ export async function ThemePage({
   previewDraft?: boolean
   children?: ReactNode
 }) {
-  const [theme, appearance, settings] = await Promise.all([
-    previewTheme ?? getActiveTheme(),
-    getAppearance(),
-    getSettings(),
-  ])
+  const [theme, settings] = await Promise.all([previewTheme ?? getActiveTheme(), getSettings()])
+  const appearance = await getAppearance(theme, Boolean(context?.preview && previewDraft))
   const template = resolveTemplate(getTemplateHierarchy(query), Object.keys(theme.templates))
   // front-page wins on a static homepage, as in WordPress's hierarchy.
   const selectedPageTemplate =
@@ -67,8 +64,8 @@ export async function ThemePage({
   const site = appearanceSite(settings)
   const blockContext: BlockContext = {
     site,
-    appearance,
     ...context,
+    appearance,
     routeContent: children,
   }
   const { content, report } = await renderBlockTree(
@@ -94,6 +91,11 @@ export async function ThemePage({
       style={themeStyle as CSSProperties}
       data-theme-package={theme.manifest.id}
       data-theme-version={theme.hash}
+      data-width={theme.layout ? appearance.style.width : undefined}
+      data-font-size={theme.layout ? appearance.style.fontSize : undefined}
+      data-design={theme.layout ? appearance.style.design : undefined}
+      data-navigation-default={theme.layout ? appearance.header.navigationDefault : undefined}
+      data-header-sticky={theme.layout ? String(appearance.header.sticky) : undefined}
       data-theme-template={selectedPageTemplate?.name ?? template}
     >
       <link rel="stylesheet" href={themeAssetUrl(theme.manifest.id, theme.hash, 'style.css')} />
