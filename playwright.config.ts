@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test'
+import { resolve } from 'node:path'
 
 if (!process.env.TEST_DATABASE_URL)
   throw new Error('Set TEST_DATABASE_URL to an isolated, migrated test database.')
@@ -25,6 +26,15 @@ export default defineConfig({
       BETTER_AUTH_URL: baseURL,
       NEXT_PUBLIC_SITE_URL: baseURL,
       NEXTPRESS_CLIENT_IP_HEADER: 'x-real-ip',
+      ...(process.env.TEST_RELEASE_FIXTURE
+        ? {
+            TEST_RELEASE_FIXTURE: resolve(process.env.TEST_RELEASE_FIXTURE),
+            NEXTPRESS_RELEASE_OWNER: 'nextpress-test',
+            NEXTPRESS_RELEASE_REPOSITORY: 'release-fixture',
+            NEXTPRESS_DEPLOY_ADAPTER: 'self-hosted',
+            NODE_OPTIONS: `--import=${JSON.stringify(resolve('tests/helpers/release-fixture.mjs'))}`,
+          }
+        : {}),
     },
   },
 })

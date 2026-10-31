@@ -14,7 +14,7 @@ const pollInterval = 10_000
 
 const statusLabels: Record<string, string> = {
   queued: 'Menunggu provider',
-  deploying: 'Deployment berjalan',
+  deploying: 'Pembaruan berjalan',
   ready: 'Selesai',
   failed: 'Gagal',
 }
@@ -46,7 +46,12 @@ export function UpdateManager({ data }: { data: UpdatePageData }) {
     data.check?.status === 'available' && !data.check.compatible
       ? (data.check.incompatibleReason ?? 'Rilis ini tidak kompatibel dengan instalasi.')
       : null
-  const reason = blocked ?? incompatible ?? (active ? 'Pembaruan sedang berjalan.' : null)
+  const maintenance =
+    data.adapter.id === 'self-hosted' && latest && !latest.rollbackSafe
+      ? 'Rilis ini mengubah skema database. Jadwalkan maintenance dengan operator.'
+      : null
+  const reason =
+    blocked ?? incompatible ?? maintenance ?? (active ? 'Pembaruan sedang berjalan.' : null)
 
   useEffect(() => {
     if (!active) return
@@ -139,6 +144,12 @@ export function UpdateManager({ data }: { data: UpdatePageData }) {
         <p>Instalasi sudah memakai versi stabil terbaru yang diterbitkan.</p>
       )}
 
+      <p>
+        Metode pemasangan: <strong>{data.adapter.label}</strong>.{' '}
+        {data.adapter.id === 'self-hosted'
+          ? 'Worker membuat backup database sebelum memasang versi baru. Proses tetap berjalan setelah halaman ini ditutup.'
+          : 'Siapkan backup atau snapshot database sebelum memulai pembaruan.'}
+      </p>
       {latest && (
         <>
           <h2>Catatan rilis {latest.tag}</h2>
@@ -159,10 +170,19 @@ export function UpdateManager({ data }: { data: UpdatePageData }) {
         {latest &&
           (confirming ? (
             <>
-              <button type="button" className="button" onClick={apply} disabled={starting || Boolean(reason)}>
+              <button
+                type="button"
+                className="button"
+                onClick={apply}
+                disabled={starting || Boolean(reason)}
+              >
                 {starting ? 'Memulai…' : `Ya, pasang ${latest.version}`}
               </button>
-              <button type="button" className="button secondary" onClick={() => setConfirming(false)}>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setConfirming(false)}
+              >
                 Batal
               </button>
             </>
@@ -184,9 +204,8 @@ export function UpdateManager({ data }: { data: UpdatePageData }) {
         <>
           <h2>Penyiapan metode pemasangan</h2>
           <p className="adminPageIntro">
-            Adapter <strong>{data.adapter.label}</strong> meminta provider membangun ulang rilis
-            dari tag yang terverifikasi. Isi variabel berikut pada server (bukan di klien), lalu
-            mulai ulang proses aplikasi:
+            Siapkan metode <strong>{data.adapter.label}</strong> sekali pada hosting instalasi agar
+            pembaruan berikutnya dapat dimulai dari dashboard.
           </p>
           <ul className={styles.steps}>
             {data.adapter.missing.map((name) => (
@@ -196,9 +215,9 @@ export function UpdateManager({ data }: { data: UpdatePageData }) {
             ))}
           </ul>
           <p className="adminPageIntro">
-            Token dibuat di dasbor provider dan hanya perlu izin deployment untuk proyek ini.
-            Jangan menaruh token di pengaturan situs atau variabel yang diawali{' '}
-            <code>NEXT_PUBLIC_</code>.
+            {data.adapter.id === 'self-hosted'
+              ? 'Panduan penyiapan: docs/deployment/self-hosted-updates.md pada paket NextPress.'
+              : 'Token provider disimpan di server dan hanya memerlukan izin deployment untuk proyek ini.'}
           </p>
         </>
       )}
@@ -210,7 +229,7 @@ export function UpdateManager({ data }: { data: UpdatePageData }) {
             <span className={styles.badge} data-status={job.status}>
               {statusLabels[job.status] ?? job.status}
             </span>
-            {job.stale && ' · provider belum menjawab lebih dari satu jam'}
+            {job.stale && ' · proses belum selesai lebih dari satu jam; periksa hosting'}
           </p>
           <dl>
             <dt>Versi</dt>
