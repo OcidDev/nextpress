@@ -2,6 +2,11 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: {
+    // Public build identity only. Never place credentials in next.config env.
+    NEXTPRESS_BUILD_COMMIT:
+      process.env.NEXTPRESS_RELEASE_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || '',
+  },
   skipTrailingSlashRedirect: true,
   experimental: { serverActions: { bodySizeLimit: '6mb' } },
 

@@ -66,17 +66,22 @@ export function parseReleaseManifest(value: unknown): ReleaseManifest {
   if (typeof data.notes !== 'string') fail('notes')
 
   const requirements = data.requirements as Record<string, unknown> | undefined
-  const node = typeof requirements?.node === 'string' ? parseStableVersion(requirements.node) : undefined
+  const node =
+    typeof requirements?.node === 'string' ? parseStableVersion(requirements.node) : undefined
   if (!node) fail('requirements.node')
   if (node!.major < minimumNodeVersion[0]) fail('requirements.node minimal 22')
-  if (typeof requirements?.packageManager !== 'string' || !requirements.packageManager.trim())
+  if (
+    typeof requirements?.packageManager !== 'string' ||
+    !/^pnpm@\d+\.\d+\.\d+$/.test(requirements.packageManager)
+  )
     fail('requirements.packageManager')
 
   if (typeof data.rollbackSafe !== 'boolean') fail('rollbackSafe')
 
   const migrations = data.migrations as Record<string, unknown> | undefined
   const count = migrations?.count
-  if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) fail('migrations.count')
+  if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0)
+    fail('migrations.count')
   const upto = migrations?.upto
   if (upto !== null && (typeof upto !== 'string' || !/^[a-z0-9_]+$/.test(upto)))
     fail('migrations.upto')
@@ -124,12 +129,15 @@ export const releaseManifestSchema = z.object({
   notes: z.string(),
   requirements: z.object({
     node: z.string().regex(/^\d+\.\d+\.\d+$/),
-    packageManager: z.string().min(1),
+    packageManager: z.string().regex(/^pnpm@\d+\.\d+\.\d+$/),
   }),
   rollbackSafe: z.boolean(),
   migrations: z.object({
     count: z.number().int().min(0),
-    upto: z.string().regex(/^[a-z0-9_]+$/).nullable(),
+    upto: z
+      .string()
+      .regex(/^[a-z0-9_]+$/)
+      .nullable(),
   }),
   source: z.object({
     archive: z.string().url().startsWith('https://'),
@@ -140,14 +148,16 @@ export const releaseManifestSchema = z.object({
 
 /** Whether this server's Node runtime satisfies the release's Node floor. */
 export function releaseCompatibility(manifest: ReleaseManifest) {
-  const [nodeMajor = 0, nodeMinor = 0] = process.versions.node.split('.').map(Number)
+  const [nodeMajor = 0, nodeMinor = 0, nodePatch = 0] = process.versions.node.split('.').map(Number)
   const required = parseStableVersion(manifest.requirements.node)!
   const compatible =
-    nodeMajor > required.major || (nodeMajor === required.major && nodeMinor >= required.minor)
+    nodeMajor > required.major ||
+    (nodeMajor === required.major &&
+      (nodeMinor > required.minor || (nodeMinor === required.minor && nodePatch >= required.patch)))
   return {
     compatible,
     incompatibleReason: compatible
       ? undefined
-      : `Rilis memerlukan Node ${manifest.requirements.node}, server menjalankan Node ${nodeMajor}.${nodeMinor}.`,
+      : `Rilis memerlukan Node ${manifest.requirements.node}, server menjalankan Node ${process.versions.node}.`,
   }
 }

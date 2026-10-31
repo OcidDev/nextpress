@@ -30,7 +30,7 @@ export const updateJobs = pgTable(
     toVersion: varchar('to_version', { length: 32 }).notNull(),
     tag: varchar('tag', { length: 64 }).notNull(),
     commit: varchar('commit', { length: 40 }).notNull(),
-    /** "vercel" today; the adapter name that owns the job. */
+    /** Hosting adapter that owns the job: vercel or self-hosted. */
     adapter: varchar('adapter', { length: 32 }).notNull(),
     /**
      * queued → deploying → ready | failed. `deploying` means the provider has
