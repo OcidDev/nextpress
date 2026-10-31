@@ -8,3 +8,4 @@ allowBuilds:
 overrides:
   'postcss@<8.5.23': 8.5.28
   'esbuild@<0.25.0': 0.25.12
+  'deepmerge@<4.3.2': 4.3.2
