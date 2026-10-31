@@ -77,3 +77,12 @@ variables consumed by their block presentation. Resetting removes these override
 A package defines the presentation; the CMS provides the editor, validation,
 storage, reference checks, preview and lifecycle. Plugin code/configuration stay
 in the plugin registry.
+
+## Site settings inside customization
+
+The customizer embeds the same CMS forms as `/admin/settings/*` for identity,
+menus, footer links, social links, and reading settings. Saving applies site-wide,
+including when previewing an inactive theme; it does not create a theme draft.
+The preview refreshes after saving. Access still requires `manage_options` in
+addition to the editor's `edit_theme_options` capability. Themes neither copy
+these settings into their packages nor implement their own save handlers.

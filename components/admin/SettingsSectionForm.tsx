@@ -6,6 +6,7 @@ import { saveSettings } from '@/server/actions/operations'
 import { themeOptions } from '@/data/themes'
 import type { CategoryNode } from '@/lib/core/category-tree'
 import type { DefaultCategoryState } from '@/lib/db/queries/taxonomy'
+import { useUnsavedChanges } from './useUnsavedChanges'
 import { MediaPicker } from './MediaPicker'
 
 export function SettingsSectionForm({
@@ -27,7 +28,15 @@ export function SettingsSectionForm({
       ? { defaultCategory: categoryDefault.id }
       : {}),
   }))
-  const [state, action, pending] = useActionState(saveSettings, {})
+  const { dirty, setDirty } = useUnsavedChanges()
+  const [state, action, pending] = useActionState(
+    async (previous: Parameters<typeof saveSettings>[0], data: FormData) => {
+      const result = await saveSettings(previous, data)
+      if (result.success) setDirty(false)
+      return result
+    },
+    {},
+  )
 
   const patch =
     section === 'general'
@@ -75,6 +84,7 @@ export function SettingsSectionForm({
 
   function update<K extends keyof SiteSettings>(key: K, next: SiteSettings[K]) {
     setValue((current) => ({ ...current, [key]: next }))
+    setDirty(true)
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -700,7 +710,8 @@ export function SettingsSectionForm({
           {state.error}
         </p>
       )}
-      {state.success && (
+      {dirty && <p role="status">Ada perubahan yang belum disimpan.</p>}
+      {!dirty && state.success && (
         <p role="status" style={{ color: 'var(--success, #16a34a)', marginTop: '0.5rem' }}>
           {state.success}
         </p>
