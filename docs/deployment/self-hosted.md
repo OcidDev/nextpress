@@ -169,9 +169,13 @@ didaftarkan di `lib/plugins/content-seo-server.ts`, yang bawaannya kosong.
 
 ## 8. Pembaruan
 
-Pada server sendiri, `Dasbor → Pembaruan` belum memiliki adapter yang dapat
-menjalankan update; halaman itu hanya berlaku untuk Vercel. Perbarui secara
-manual, dengan urutan yang menjaga situs tetap melayani:
+`Dasbor → Pembaruan` mendukung pemasangan melalui worker server/VPS. Siapkan
+worker dan direktori rilis satu kali sesuai
+[`self-hosted-updates.md`](self-hosted-updates.md). Setelah itu administrator
+dapat memasang rilis stabil tanpa menyinkronkan repository sendiri.
+
+Untuk instalasi yang belum memakai worker atau upgrade schema yang memerlukan
+maintenance, lakukan pembaruan manual berikut dalam direktori rilis terpisah:
 
 ```bash
 pnpm db:backup /var/backups/nextpress-$(date +%F-%H%M).dump
@@ -203,10 +207,10 @@ Rollback kode tidak membatalkan migrasi database. Bila manifest rilis menyatakan
 
 ## Pemecahan masalah
 
-| Gejala | Penyebab umum |
-| ------ | ------------- |
-| `pnpm db:migrate` gagal pada `relation "…" already exists` | Database tidak kosong atau berasal dari riwayat migrasi lain; pakai database baru lalu impor konten. |
-| Login berhasil tetapi kembali ke halaman masuk | `BETTER_AUTH_URL` berbeda origin dari URL yang dibuka; samakan dengan `NEXT_PUBLIC_SITE_URL`. |
-| Gambar gagal diunggah | Batas `NEXT_PUBLIC_MEDIA_MAX_MB` atau `client_max_body_size` reverse proxy. |
-| Zip tema/plugin ditolak | Ukuran, nama berkas, atau `theme.manifest.json`/`plugin.json` tidak sesuai format; pesan galat menyebut berkasnya. |
-| `Database siap` gagal setelah migrasi | `pnpm db:check` memeriksa tabel hierarki kategori; jalankan migrasi pada database yang benar. |
+| Gejala                                                     | Penyebab umum                                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pnpm db:migrate` gagal pada `relation "…" already exists` | Database tidak kosong atau berasal dari riwayat migrasi lain; pakai database baru lalu impor konten.               |
+| Login berhasil tetapi kembali ke halaman masuk             | `BETTER_AUTH_URL` berbeda origin dari URL yang dibuka; samakan dengan `NEXT_PUBLIC_SITE_URL`.                      |
+| Gambar gagal diunggah                                      | Batas `NEXT_PUBLIC_MEDIA_MAX_MB` atau `client_max_body_size` reverse proxy.                                        |
+| Zip tema/plugin ditolak                                    | Ukuran, nama berkas, atau `theme.manifest.json`/`plugin.json` tidak sesuai format; pesan galat menyebut berkasnya. |
+| `Database siap` gagal setelah migrasi                      | `pnpm db:check` memeriksa tabel hierarki kategori; jalankan migrasi pada database yang benar.                      |

@@ -17,31 +17,35 @@ diterbitkan di GitHub.
 ## Variabel lingkungan
 
 Isi di **Project Settings → Environment Variables** untuk environment
-*Production* (dan *Preview* bila preview dipakai untuk uji):
+_Production_ (dan _Preview_ bila preview dipakai untuk uji):
 
-| Nama                         | Wajib | Keterangan                                                                 |
-| ---------------------------- | ----- | -------------------------------------------------------------------------- |
-| `DATABASE_URL`               | ya    | Connection string PostgreSQL, termasuk `sslmode=require` bila didukung.     |
-| `NEXT_PUBLIC_SITE_URL`       | ya    | Origin produksi, mis. `https://contoh.com`. Dipakai untuk pemeriksaan versi. |
-| `BETTER_AUTH_URL`            | ya    | Origin yang sama dengan `NEXT_PUBLIC_SITE_URL`.                             |
-| `BETTER_AUTH_SECRET`         | ya    | `openssl rand -hex 32`, berbeda per environment.                            |
-| `NEXTPRESS_CLIENT_IP_HEADER` | ya    | `x-forwarded-for`; gunakan header satu IP yang ditimpa ingress Vercel.       |
-| `VERCEL_TOKEN`               | ya\*  | Token dengan izin membuat deployment pada proyek ini.                       |
-| `VERCEL_PROJECT_ID`          | ya\*  | ID proyek (`prj_…`).                                                        |
-| `VERCEL_REPO_ID`             | ya\*  | ID repository GitHub (`123456789`), bukan `owner/name`.                      |
-| `VERCEL_TEAM_ID`             | ya\*\*| ID tim (`team_…`).                                                          |
-| `VERCEL_TEAM_SLUG`           | ya\*\*| Alternatif `VERCEL_TEAM_ID` untuk akun tim.                                 |
-| `NEXTPRESS_RELEASE_OWNER`    | tidak | Bawaan `OcidDev`.                                                           |
-| `NEXTPRESS_RELEASE_REPOSITORY` | tidak | Bawaan `nextpress`.                                                       |
-| `NEXTPRESS_GITHUB_TOKEN`     | tidak | Hanya menaikkan batas API GitHub atau membaca repo privat. Tanpa izin tulis. |
+| Nama                           | Wajib  | Keterangan                                                                   |
+| ------------------------------ | ------ | ---------------------------------------------------------------------------- |
+| `DATABASE_URL`                 | ya     | Connection string PostgreSQL, termasuk `sslmode=require` bila didukung.      |
+| `NEXT_PUBLIC_SITE_URL`         | ya     | Origin produksi, mis. `https://contoh.com`. Dipakai untuk pemeriksaan versi. |
+| `BETTER_AUTH_URL`              | ya     | Origin yang sama dengan `NEXT_PUBLIC_SITE_URL`.                              |
+| `BETTER_AUTH_SECRET`           | ya     | `openssl rand -hex 32`, berbeda per environment.                             |
+| `NEXTPRESS_CLIENT_IP_HEADER`   | ya     | `x-forwarded-for`; gunakan header satu IP yang ditimpa ingress Vercel.       |
+| `VERCEL_TOKEN`                 | ya\*   | Token dengan izin membuat deployment pada proyek ini.                        |
+| `VERCEL_PROJECT_ID`            | ya\*   | ID proyek (`prj_…`).                                                         |
+| `VERCEL_TEAM_ID`               | ya\*\* | ID tim (`team_…`).                                                           |
+| `VERCEL_TEAM_SLUG`             | ya\*\* | Alternatif `VERCEL_TEAM_ID` untuk akun tim.                                  |
+| `NEXTPRESS_RELEASE_OWNER`      | tidak  | Bawaan `OcidDev`.                                                            |
+| `NEXTPRESS_RELEASE_REPOSITORY` | tidak  | Bawaan `nextpress`.                                                          |
+| `NEXTPRESS_GITHUB_TOKEN`       | tidak  | Hanya menaikkan batas API GitHub atau membaca repo privat. Tanpa izin tulis. |
 
 \* Hanya diperlukan bila tombol **Perbarui NextPress** dipakai; halaman tetap
 berfungsi tanpa itu dan menjelaskan variabel yang belum diisi.
 \*\* Pilih salah satu untuk akun tim.
 
-`VERCEL_REPO_ID` dapat dilihat di URL repository GitHub atau lewat API
-`/v2/projects/{projectId}`. Jangan menaruh token Vercel di pengaturan situs,
-variabel `NEXT_PUBLIC_*`, atau paket tema/plugin.
+Repository sumber pembaruan diambil dari `NEXTPRESS_RELEASE_OWNER` dan
+`NEXTPRESS_RELEASE_REPOSITORY`; ID repository ditemukan melalui API GitHub.
+`VERCEL_REPO_ID` lama tidak dipakai. Clone instalasi tidak perlu memiliki tag baru
+dari upstream. Proyek Vercel tetap milik pengguna, sementara source pembaruan
+berasal dari penerbit rilis resmi. Token/integrasi Vercel harus diizinkan mengakses
+repository penerbit; kebijakan akun/provider dapat menolak akses lintas repository.
+Alur provider ini memerlukan pengujian pada proyek tujuan sebelum dipakai produksi.
+Jangan menaruh token di pengaturan situs, variabel `NEXT_PUBLIC_*`, atau paket tema/plugin.
 
 ## Alur deployment
 
@@ -63,15 +67,17 @@ menampilkan jumlah migrasi dan nama migrasi terakhir dari manifest rilis.
    disimpan di database dan dipakai ulang selama 15 menit; tombol **Cek pembaruan**
    memaksa pemeriksaan baru.
 2. **Perbarui NextPress** mengirim tag yang ditampilkan ke server. Server mengambil
-   ulang manifest, memvalidasi versi, commit, checksum, dan kompatibilitas Node,
+   ulang manifest, memvalidasi versi, commit, sumber aset, dan kompatibilitas Node,
    lalu meminta Vercel membangun deployment produksi yang terikat pada `ref` tag
-   dan `sha` commit tersebut. Browser tidak pernah mengirim URL atau perintah.
+   dan `sha` commit tersebut dari repository penerbit. Adapter Git Vercel membangun
+   commit yang dipin; ia tidak mengunduh arsip atau menghitung ulang SHA-256 arsip
+   seperti worker VPS. Browser tidak pernah mengirim URL atau perintah.
 3. Pekerjaan dicatat di tabel `update_jobs`; indeks unik parsial hanya
    mengizinkan satu pekerjaan aktif.
 4. Halaman memantau status deployment Vercel (`QUEUED` → `INITIALIZING` →
    `BUILDING` → `READY`/`ERROR`). Setelah `READY`, aplikasi memanggil
    `GET /api/version` pada origin produksi. Pekerjaan baru ditandai **Selesai**
-   ketika versi yang benar-benar melayani sama dengan versi tujuan; status
+   ketika versi dan commit yang benar-benar melayani sama dengan tujuan; status
    provider saja tidak dianggap bukti update terpasang.
 5. Bila provider tidak menjawab lebih dari satu jam, halaman menandai pekerjaan
    sebagai basi. Deployment yang gagal dicatat dengan pesan provider; kode lama

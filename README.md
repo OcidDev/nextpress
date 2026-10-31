@@ -19,7 +19,7 @@ Licenses; see [font notices](public/fonts/NOTICE.txt).
 - **Plugin engine** — install ZIP plugin packages that contribute sandboxed
   widget areas and page templates.
 - **Updates** — `Dasbor → Pembaruan` checks the official GitHub Release, then
-  deploys it through the configured adapter and verifies the version that is
+  installs it through the VPS worker or Vercel adapter and verifies the version and commit
   actually serving traffic.
 
 The default theme is Twenty Twenty-Four.
@@ -94,12 +94,20 @@ release from `OcidDev/nextpress` (configurable through `NEXTPRESS_RELEASE_OWNER`
 and `NEXTPRESS_RELEASE_REPOSITORY`), caches the answer for 15 minutes, and
 explains what is missing when no deployment adapter is configured.
 
-An update never runs from the web process: the browser sends only the release
-tag, the server re-validates the manifest, and the deployment adapter asks the
-hosting provider to build that tag and commit. A job is marked done only when
-`GET /api/version` on the public origin returns the target version. See
-`docs/release-contract.md` for what a release may contain and
-`docs/deployment/vercel.md` for the Vercel setup.
+The browser sends only a release tag; the server re-validates the official
+manifest. On a VPS, an independent worker verifies and installs the release
+archive, backs up the database, builds in a new directory, then switches and
+restarts the application. On Vercel, the adapter requests the official
+publisher's tag/commit in the user's project; a clone need not contain upstream
+tags. Neither method pushes to the user's repository. Completion requires the
+public origin to return the target version and commit.
+
+See [`docs/deployment/self-hosted-updates.md`](docs/deployment/self-hosted-updates.md)
+for one-time VPS worker setup and recovery. The initial VPS worker only supports
+updates with identical database migrations; schema upgrades require operator
+maintenance. Vercel configuration and provider verification requirements are in
+[`docs/deployment/vercel.md`](docs/deployment/vercel.md). The shared release
+contract is in [`docs/release-contract.md`](docs/release-contract.md).
 
 ## Validation and production build
 
