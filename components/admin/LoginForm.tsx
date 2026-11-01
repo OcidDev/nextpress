@@ -9,6 +9,8 @@ export function LoginForm() {
   return (
     <form
       className="adminForm"
+      method="post"
+      action="/api/auth/sign-in/email"
       onSubmit={async (event) => {
         event.preventDefault()
         setPending(true)

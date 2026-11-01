@@ -8,6 +8,7 @@ import { requireCapability } from '@/lib/admin'
 import { getDb } from '@/lib/db'
 import { posts, comments, commentLimits } from '@/lib/db/schema'
 import { newId } from './admin-content'
+import { clientIp } from '@/lib/client-ip'
 const input = z.object({
   postId: z.string().regex(/^[a-f0-9]{32}$/),
   authorName: z.string().trim().min(1).max(120),
@@ -35,7 +36,7 @@ export async function submitCommentData(data: FormData) {
   const secret = process.env.BETTER_AUTH_SECRET
   if (!secret) throw new Error('Komentar belum tersedia')
   const requestHeaders = await headers()
-  const ip = requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+  const ip = clientIp(requestHeaders)
   const hash = createHmac('sha256', secret).update(ip).digest('hex')
   const result = await getDb().transaction(async (tx) => {
     const [post] = await tx

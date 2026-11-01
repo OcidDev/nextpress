@@ -1,4 +1,5 @@
 import { type Actor, currentUserCan, createRoleRegistry, initialRoles } from './roles'
+import { xmlCdata, xmlText } from '@/lib/content/xml'
 
 export type HealthStatus = 'good' | 'recommended' | 'critical'
 
@@ -165,25 +166,26 @@ export function exportWxr(
     <title>${escapeXml(post.title)}</title>
     <link>${escapeXml(new URL(post.permalink || (post.type === 'page' ? `/${post.slug}` : `/blog/${post.slug}`), siteInfo.url).href)}</link>
     <pubDate>${new Date(post.date).toUTCString()}</pubDate>
-    <dc:creator><![CDATA[${post.author}]]></dc:creator>
+    <dc:creator>${xmlCdata(post.author)}</dc:creator>
     <description></description>
-    <content:encoded><![CDATA[${post.content}]]></content:encoded>
-    <excerpt:encoded><![CDATA[${post.excerpt || ''}]]></excerpt:encoded>
+    <content:encoded>${xmlCdata(post.content)}</content:encoded>
+    <excerpt:encoded>${xmlCdata(post.excerpt || '')}</excerpt:encoded>
     <wp:post_id>${escapeXml(post.id)}</wp:post_id>
     <wp:post_date>${escapeXml(post.date)}</wp:post_date>
     <wp:post_name>${escapeXml(post.slug)}</wp:post_name>
     <wp:status>${escapeXml(post.status)}</wp:status>
     <wp:post_type>${escapeXml(post.type)}</wp:post_type>
 `
-    if (post.categories) {
-      for (const cat of post.categories) {
-        itemsXml += `    <category domain="category" nicename="${escapeXml(cat)}"><![CDATA[${cat}]]></category>\n`
-      }
-    }
+    for (const [domain, names] of [
+      ['category', post.categories],
+      ['post_tag', post.tags],
+    ] as const)
+      for (const name of names || [])
+        itemsXml += `    <category domain="${domain}" nicename="${escapeXml(name)}">${xmlCdata(name)}</category>\n`
 
     if (post.meta) {
       for (const [key, val] of Object.entries(post.meta)) {
-        itemsXml += `    <wp:postmeta>\n      <wp:meta_key>${escapeXml(key)}</wp:meta_key>\n      <wp:meta_value><![CDATA[${JSON.stringify(val)}]]></wp:meta_value>\n    </wp:postmeta>\n`
+        itemsXml += `    <wp:postmeta>\n      <wp:meta_key>${escapeXml(key)}</wp:meta_key>\n      <wp:meta_value>${xmlCdata(JSON.stringify(val))}</wp:meta_value>\n    </wp:postmeta>\n`
       }
     }
 
@@ -220,29 +222,25 @@ export function importWxr(xmlContent: string, dryRun = false, maxItems = 1000): 
   const itemRegex = /<item>([\s\S]*?)<\/item>/g
   let match: RegExpExecArray | null
 
-  while ((match = itemRegex.exec(xmlContent)) !== null && items.length < maxItems) {
+  while ((match = itemRegex.exec(xmlContent)) !== null) {
     const itemXml = match[1]!
-    const titleMatch = itemXml.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)
-    const contentMatch = itemXml.match(
-      /<content:encoded>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content:encoded>/,
-    )
-    const slugMatch = itemXml.match(
-      /<wp:post_name>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/wp:post_name>/,
-    )
-    const statusMatch = itemXml.match(
-      /<wp:status>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/wp:status>/,
-    )
-    const typeMatch = itemXml.match(
-      /<wp:post_type>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/wp:post_type>/,
-    )
+    const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/)
+    const contentMatch = itemXml.match(/<content:encoded>([\s\S]*?)<\/content:encoded>/)
+    const slugMatch = itemXml.match(/<wp:post_name>([\s\S]*?)<\/wp:post_name>/)
+    const statusMatch = itemXml.match(/<wp:status>([\s\S]*?)<\/wp:status>/)
+    const typeMatch = itemXml.match(/<wp:post_type>([\s\S]*?)<\/wp:post_type>/)
 
     if (titleMatch && slugMatch) {
+      const type = typeMatch ? xmlText(typeMatch[1]!).trim() : 'post'
+      if (!['post', 'page'].includes(type)) continue
+      if (items.length >= maxItems)
+        throw new Error(`WXR maksimal ${maxItems} pos/laman. Pecah ekspor menjadi beberapa berkas.`)
       items.push({
-        title: titleMatch[1]!.trim(),
-        slug: slugMatch[1]!.trim(),
-        content: contentMatch ? contentMatch[1]!.trim() : '',
-        status: statusMatch ? statusMatch[1]!.trim() : 'publish',
-        type: typeMatch ? typeMatch[1]!.trim() : 'post',
+        title: xmlText(titleMatch[1]!).trim(),
+        slug: xmlText(slugMatch[1]!).trim(),
+        content: contentMatch ? xmlText(contentMatch[1]!).trim() : '',
+        status: statusMatch ? xmlText(statusMatch[1]!).trim() : 'publish',
+        type,
       })
     }
   }

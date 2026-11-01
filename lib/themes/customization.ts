@@ -2,7 +2,15 @@ import { z } from 'zod'
 
 const id = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/)
 const label = z.string().min(1).max(100)
-const base = { id, label, group: z.enum(['Warna', 'Tipografi', 'Tata letak']) }
+const base = {
+  id,
+  label,
+  group: z.enum(['Warna', 'Tipografi', 'Tata letak']),
+  cssProperties: z
+    .array(z.string().regex(/^--[a-zA-Z][a-zA-Z0-9-]{0,79}$/))
+    .max(30)
+    .optional(),
+}
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/)
 // Select values become CSS tokens, never arbitrary CSS declarations or URLs.
 const token = z
@@ -39,6 +47,7 @@ const valuesSchema = z.record(id, z.union([z.string().max(160), z.number().finit
 export const customizationSchema = z
   .object({
     version: z.literal(1),
+    inheritDefaults: z.boolean().optional(),
     controls: z.array(controlSchema).min(1).max(30),
     presets: z
       .array(z.object({ id, name: label, values: valuesSchema }).strict())
@@ -103,10 +112,14 @@ export function resolveThemeValues(
 export function themeCustomizationStyle(config: ThemeCustomization, saved: ThemeValues = {}) {
   const values = resolveThemeValues(config, saved)
   return Object.fromEntries(
-    config.controls.map((c) => [
-      `--theme--custom--${c.id}`,
-      `${values[c.id]}${c.type === 'range' ? c.unit : ''}`,
-    ]),
+    config.controls
+      .filter((c) => !config.inheritDefaults || validValue(c, saved[c.id]))
+      .flatMap((c) =>
+        [`--theme--custom--${c.id}`, ...(c.cssProperties ?? [])].map((key) => [
+          key,
+          `${values[c.id]}${c.type === 'range' ? c.unit : ''}`,
+        ]),
+      ),
   )
 }
 export const themeCustomizationStateSchema = z.object({

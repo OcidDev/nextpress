@@ -6,7 +6,11 @@ import { installedVersion } from '@/lib/updates/versions'
 // application version.
 export function GET() {
   return NextResponse.json(
-    { name: 'nextpress', version: installedVersion },
+    {
+      name: 'nextpress',
+      version: installedVersion,
+      commit: process.env.NEXTPRESS_BUILD_COMMIT || null,
+    },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }

@@ -1,7 +1,6 @@
-Font asset sources
+Bundled fonts retain their own licenses and are not relicensed as application code.
 
-Google Sans Text and Google Sans Mono font files were downloaded from:
-
-- https://fonts.gstatic.com/s/googlesanstext/v16/5aUu9-KzpRiLCAt4Unrc-xIKmCU5qEp2iw.woff2
-- https://fonts.gstatic.com/s/googlesanstext/v16/5aUp9-KzpRiLCAt4Unrc-xIKmCU5oPFTnmhjtg.woff2
-- https://fonts.gstatic.com/s/googlesansmono/v4/P5sUzYWFYtnZ_Cg-t0Uq_rfivrdYH4RE8-pZ5gQ1abT53wVQGrk.woff2
+Inter: SIL Open Font License 1.1; see INTER-LICENSE.txt.
+Cardo: SIL Open Font License 1.1; see CARDO-LICENSE.txt.
+The bundled theme includes copies of these licenses in its assets directory.
+Monospace text uses the reader's system fonts.

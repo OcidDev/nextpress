@@ -65,6 +65,10 @@ export function PostFeed({
     setError('')
     try {
       const url = new URL(endpoint, window.location.origin)
+      const previewTheme = options.preview
+        ? document.querySelector<HTMLElement>('[data-theme-package]')?.dataset.themePackage
+        : undefined
+      if (previewTheme) url.searchParams.set('theme', previewTheme)
       url.searchParams.set('page', String(currentPage + 1))
       url.searchParams.set('key', collectionKey)
       const response = await fetch(url, { signal: controller.signal, cache: 'no-store' })

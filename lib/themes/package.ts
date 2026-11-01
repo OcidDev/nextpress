@@ -1,3 +1,4 @@
+import { themeLayoutSchema, type ThemeLayout } from './layout'
 import { MAX_THEME_ZIP_BYTES, THEME_ZIP_SIZE_MESSAGE } from './limits'
 import { themeJsonCss, themeJsonSchema } from './style'
 import { customizationSchema, type ThemeCustomization } from './customization'
@@ -42,6 +43,7 @@ export type ThemePackage = {
   templates: Record<string, ThemeTemplate>
   parts: Record<string, ThemeTemplate>
   css: string
+  layout?: ThemeLayout
   customization?: ThemeCustomization
   pageTemplates: { name: string; title: string }[]
 }
@@ -125,7 +127,7 @@ export function validateThemePackage(files: ThemeFiles): ThemePackage {
   for (const name of names) {
     if (
       !safePath(name) ||
-      !/^(?:theme\.manifest\.json|theme\.json|customizer\.json|screenshot\.png|style\.css|(?:templates|parts)\/[a-z0-9-]+\.json|assets\/[a-zA-Z0-9_./-]+\.(?:woff2|png|jpg|jpeg|webp|gif|txt))$/.test(
+      !/^(?:theme\.manifest\.json|theme\.json|customizer\.json|layout\.json|screenshot\.png|style\.css|(?:templates|parts)\/[a-z0-9-]+\.json|assets\/[a-zA-Z0-9_./-]+\.(?:woff2|png|jpg|jpeg|webp|gif|txt))$/.test(
         name,
       )
     )
@@ -157,6 +159,7 @@ export function validateThemePackage(files: ThemeFiles): ThemePackage {
   const customization = files['customizer.json']
     ? customizationSchema.parse(json('customizer.json'))
     : undefined
+  const layout = files['layout.json'] ? themeLayoutSchema.parse(json('layout.json')) : undefined
   const themeJson = themeJsonSchema.parse(json('theme.json'))
   const pageTemplates = themeJson.customTemplates ?? []
   if (new Set(pageTemplates.map((item) => item.name)).size !== pageTemplates.length)
@@ -210,7 +213,7 @@ export function validateThemePackage(files: ThemeFiles): ThemePackage {
     hash,
     files,
   )
-  return { manifest, files, hash, templates, parts, css, customization, pageTemplates }
+  return { manifest, files, hash, templates, parts, css, customization, layout, pageTemplates }
 }
 
 export async function readThemeZip(buffer: Buffer): Promise<ThemePackage> {

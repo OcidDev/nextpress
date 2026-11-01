@@ -56,7 +56,7 @@ export async function startUpdateAction(tag: string): Promise<UpdateActionResult
   try {
     const job = await startUpdateJob(tag)
     revalidatePath('/admin/updates')
-    return { success: true, message: 'Deployment dimulai. Pantau status di bawah.', job }
+    return { success: true, message: 'Pembaruan dijadwalkan. Pantau status di bawah.', job }
   } catch (error) {
     return failure(error)
   }

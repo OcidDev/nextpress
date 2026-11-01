@@ -90,7 +90,8 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
         <div>
           <h2 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 700 }}>Tema Terpasang</h2>
           <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
-            Kelola dan pilih tema tampilan situs Anda, atau unggah tema baru dalam format berkas ZIP.
+            Kelola dan pilih tema tampilan situs Anda, atau unggah tema baru dalam format berkas
+            ZIP.
           </p>
         </div>
         <div className="adminActions" style={{ margin: 0 }}>
@@ -321,7 +322,7 @@ export function ThemeGallery({ themes }: { themes: InstalledTheme[] }) {
                     {isActivating ? 'Mengaktifkan…' : 'Aktifkan'}
                   </button>
                 )}
-                {!theme.isActive && !theme.isDefault && (
+                {!theme.isActive && (
                   <button
                     type="button"
                     className="button"

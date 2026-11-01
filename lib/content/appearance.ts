@@ -167,7 +167,7 @@ const cardDefaults = { bookmarks: false, showViews: false, quickEdit: false }
 
 const uniqueItems = <T extends { id: string }>(items: T[]) =>
   new Set(items.map((item) => item.id)).size === items.length
-const appearanceV2Schema = z
+export const appearanceV2Schema = z
   .object({
     schemaVersion: z.literal(2),
     preset: z.enum(['blog', 'magazine', 'minimal', 'reference']),

@@ -1,6 +1,7 @@
 {
   "name": "nextpress",
-  "version": "0.2.0",
+  "version": "0.2.1",
+  "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,10 +23,18 @@
     "plugin:pack": "node scripts/package-plugin.mjs",
     "theme:pack": "tsx scripts/package-theme.ts",
     "release:pack": "node scripts/package-release.mjs",
-    "vercel-build": "node scripts/vercel-build.mjs"
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "test:security": "tsx --test tests/security.test.ts tests/import.test.ts",
+    "test:e2e": "playwright test",
+    "test:db": "tsx --test tests/database.test.ts",
+    "release:verify": "node scripts/verify-deployment.mjs",
+    "test:themes": "tsx --test tests/theme-lifecycle.test.ts tests/theme-layout.test.ts",
+    "test:updates": "tsx --test tests/updates.test.ts",
+    "test:updates:db": "tsx --test tests/updates-db.test.ts tests/updates-system.test.ts",
+    "update:worker": "tsx scripts/update-worker.ts"
   },
   "dependencies": {
-    "@next/third-parties": "^15.5.4",
+    "@next/third-parties": "^15.5.28",
     "@tiptap/extension-image": "^3.31.4",
     "@tiptap/extension-text-align": "3.31.4",
     "@tiptap/pm": "^3.31.4",
@@ -35,20 +44,21 @@
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
     "fflate": "^0.8.3",
-    "next": "^15.5.4",
+    "next": "^15.5.28",
     "pg": "^8.23.1",
     "postcss": "^8.5.29",
     "postcss-selector-parser": "^7.1.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "server-only": "^0.0.1",
     "sharp": "^0.35.5",
     "yauzl": "^3.4.0",
-    "zod": "^4.1.11"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
-    "@next/env": "15.5.27",
+    "@next/env": "15.5.28",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.5.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.1.13",
@@ -57,10 +67,13 @@
     "@types/yauzl": "^3.4.0",
     "drizzle-kit": "^0.31.5",
     "eslint": "^9.39.5",
-    "eslint-config-next": "15.5.27",
+    "eslint-config-next": "15.5.28",
     "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2"
   },
-  "packageManager": "pnpm@11.22.0"
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.0.0"
+  }
 }

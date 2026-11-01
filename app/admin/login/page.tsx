@@ -13,9 +13,14 @@ export default async function LoginPage({
   if (params.notice === 'email_updated') {
     noticeMessage = 'Email berhasil diperbarui. Silakan masuk kembali dengan email baru Anda.'
   } else if (params.notice === 'password_updated') {
-    noticeMessage = 'Kata sandi berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.'
+    noticeMessage =
+      'Kata sandi berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.'
   } else if (params.notice === 'relogin') {
     noticeMessage = 'Kredensial akun telah diubah. Silakan masuk kembali.'
+  } else if (params.notice === 'login_failed') {
+    noticeMessage = 'Tidak dapat masuk. Periksa email dan kata sandi, lalu coba lagi.'
+  } else if (params.notice === 'rate_limited') {
+    noticeMessage = 'Terlalu banyak percobaan. Coba lagi satu menit lagi.'
   }
 
   return (

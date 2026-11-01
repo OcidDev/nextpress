@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    # Match the verified CI image and its PostgreSQL 16 client packages.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -35,8 +36,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://nextpress:nextpress@localhost:5432/nextpress
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      BETTER_AUTH_URL: http://localhost:3000
+      TEST_RELEASE_FIXTURE: .local/test-release.json
+      NEXT_PUBLIC_SITE_URL: http://localhost:3109
+      BETTER_AUTH_URL: http://localhost:3109
       BETTER_AUTH_SECRET: ci-only-not-a-real-secret-000000000000
       GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
@@ -45,6 +47,15 @@ jobs:
           # The previous tag determines rollbackSafe and the packaging script
           # verifies that the tag points at HEAD.
           fetch-depth: 0
+
+      # Use clients matching the service, regardless of the runner's defaults.
+      - name: Select PostgreSQL 16 backup and restore tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/16/bin/pg_dump --version
+          /usr/lib/postgresql/16/bin/pg_restore --version
 
       - uses: pnpm/action-setup@v4
         with:
@@ -59,13 +70,29 @@ jobs:
 
       - run: pnpm typecheck
       - run: pnpm lint
+      - run: pnpm test:security
+      - run: pnpm test:updates
+      - run: pnpm test:themes
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+      - run: pnpm audit --prod
 
       # The database must exist before the build: static export of pages such as
       # /search reads cms_options, so building against an empty database fails.
       - run: pnpm db:migrate
       - run: pnpm db:check
+      - run: pnpm test:db
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+      - run: pnpm test:updates:db
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Build release asset and manifest
         run: node scripts/package-release.mjs "${GITHUB_REF_NAME}" dist

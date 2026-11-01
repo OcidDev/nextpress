@@ -8,18 +8,11 @@ import { bootExtensions } from '@/lib/extensions/bootstrap'
 import './globals.css'
 
 const sans = localFont({
-  src: [
-    { path: '../public/fonts/google-sans-text-regular.woff2', weight: '400', style: 'normal' },
-    { path: '../public/fonts/google-sans-text-bold.woff2', weight: '700', style: 'normal' },
-  ],
+  src: '../public/fonts/inter-variable.woff2',
+  weight: '100 900',
   variable: '--font-sans',
   display: 'swap',
   fallback: ['Arial', 'Helvetica', 'sans-serif'],
-})
-const mono = localFont({
-  src: '../public/fonts/google-sans-mono-regular.woff2',
-  variable: '--font-mono',
-  display: 'swap',
 })
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -73,7 +66,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       dir={siteConfig.direction}
       data-mode={settings.defaultMode}
       data-theme={settings.defaultTheme}
-      className={`${sans.variable} ${mono.variable}`}
+      className={sans.variable}
       suppressHydrationWarning
     >
       <head>

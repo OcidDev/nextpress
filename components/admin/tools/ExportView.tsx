@@ -15,7 +15,7 @@ export function ExportView() {
     try {
       const res = await exportWxrAction({
         type: contentType,
-        status: postStatus,
+        status: contentType === 'posts' ? postStatus : 'all',
       })
 
       if (res.error || !res.xml) {
@@ -34,7 +34,9 @@ export function ExportView() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kegagalan saat mengunduh berkas ekspor.')
+      setError(
+        err instanceof Error ? err.message : 'Terjadi kegagalan saat mengunduh berkas ekspor.',
+      )
     } finally {
       setLoading(false)
     }
@@ -45,14 +47,29 @@ export function ExportView() {
       <div className="adminSettingsSection">
         <h2>Ekspor Konten Situs</h2>
         <p>
-          Bila Anda mengeklik tombol di bawah ini, sistem akan membuat berkas XML untuk disimpan di komputer Anda.
-          Format ini disebut format WordPress eXtended RSS (WXR 1.2), yang berisi pos, laman, komentar, bidang kustom, kategori, dan tag Anda.
+          Bila Anda mengeklik tombol di bawah ini, sistem akan membuat berkas XML untuk disimpan di
+          komputer Anda. Format WordPress eXtended RSS (WXR 1.2) memuat pos, laman, kategori, dan
+          tag. Komentar, berkas media, dan pengaturan situs tidak disertakan. Gunakan backup
+          database untuk pemulihan instalasi lengkap.
         </p>
 
-        <fieldset style={{ border: 'none', padding: 0, margin: '1.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Pilih apa yang ingin diekspor:</legend>
-          
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+        <fieldset
+          style={{
+            border: 'none',
+            padding: 0,
+            margin: '1.5rem 0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+          <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+            Pilih apa yang ingin diekspor:
+          </legend>
+
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          >
             <input
               type="radio"
               name="contentType"
@@ -63,7 +80,9 @@ export function ExportView() {
             <strong>Semua konten</strong> (pos dan laman)
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          >
             <input
               type="radio"
               name="contentType"
@@ -75,7 +94,15 @@ export function ExportView() {
           </label>
 
           {contentType === 'posts' && (
-            <div style={{ marginLeft: '1.75rem', marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div
+              style={{
+                marginLeft: '1.75rem',
+                marginTop: '0.5rem',
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'center',
+              }}
+            >
               <label>
                 Status:
                 <select
@@ -91,7 +118,9 @@ export function ExportView() {
             </div>
           )}
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          >
             <input
               type="radio"
               name="contentType"
@@ -103,14 +132,13 @@ export function ExportView() {
           </label>
         </fieldset>
 
-        {error && <p role="alert" style={{ color: '#ef4444', fontWeight: 500, marginBottom: '1rem' }}>{error}</p>}
+        {error && (
+          <p role="alert" style={{ color: '#ef4444', fontWeight: 500, marginBottom: '1rem' }}>
+            {error}
+          </p>
+        )}
 
-        <button
-          type="button"
-          className="button"
-          onClick={handleExport}
-          disabled={loading}
-        >
+        <button type="button" className="button" onClick={handleExport} disabled={loading}>
           {loading ? 'Membuat Berkas Ekspor…' : 'Unduh Berkas Ekspor'}
         </button>
       </div>

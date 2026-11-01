@@ -9,6 +9,7 @@ import { fetchLatestRelease, type UpdateCheck } from './release'
 import { releaseCompatibility, type ReleaseManifest } from './manifest'
 import type { DeploymentAdapter } from './adapter'
 import { vercelAdapter } from './vercel'
+import { selfHostedAdapter } from './self-hosted'
 
 /**
  * GitHub is polled at most every 15 minutes; the stored answer is served in
@@ -53,10 +54,15 @@ export type UpdatePageData = {
   job: UpdateJobView | null
 }
 
-const adapters: DeploymentAdapter[] = [vercelAdapter]
+const adapters: DeploymentAdapter[] = [vercelAdapter, selfHostedAdapter]
 
-function adapter(): DeploymentAdapter {
-  return adapters.find((item) => item.id === process.env.NEXTPRESS_DEPLOY_ADAPTER) ?? vercelAdapter
+function adapter(
+  id = process.env.NEXTPRESS_DEPLOY_ADAPTER || (process.env.VERCEL ? 'vercel' : 'self-hosted'),
+): DeploymentAdapter {
+  const selected = adapters.find((item) => item.id === id)
+  if (!selected)
+    throw new UpdateJobError('Metode pembaruan tidak dikenal. Periksa NEXTPRESS_DEPLOY_ADAPTER.')
+  return selected
 }
 
 function cachedCheck(value: unknown): CachedCheck | null {
@@ -82,7 +88,11 @@ function fresh(check: CachedCheck, ttl: number) {
 }
 
 /** Manual check always asks GitHub; the result is cached for the next read. */
-export async function checkForUpdates(): Promise<{ check: UpdateCheck; cached: null; error: null }> {
+export async function checkForUpdates(): Promise<{
+  check: UpdateCheck
+  cached: null
+  error: null
+}> {
   const check = await fetchLatestRelease(installedVersion)
   await storeCheck(check)
   return { check, cached: null, error: null }
@@ -159,7 +169,7 @@ export async function getUpdatePageData(): Promise<UpdatePageData> {
   await requireCapability('update_core')
   const [status, job] = await Promise.all([readUpdateStatus(), jobView()])
   const active = adapter()
-  const absent = active.missing()
+  const absent = await active.missing()
   return {
     installed: installedVersion,
     check: status.check,
@@ -185,7 +195,7 @@ export class UpdateJobError extends Error {}
 export async function startUpdateJob(tag: string): Promise<UpdateJobView> {
   const session = await requireCapability('update_core')
   const active = adapter()
-  const absent = active.missing()
+  const absent = await active.missing()
   if (absent.length)
     throw new UpdateJobError(`Pembaruan belum dikonfigurasi: ${absent.join(', ')} belum diisi.`)
 
@@ -194,11 +204,19 @@ export async function startUpdateJob(tag: string): Promise<UpdateJobView> {
   if (check.status !== 'available')
     throw new UpdateJobError('Instalasi sudah memakai versi stabil terbaru.')
   if (check.latest.tag !== tag)
-    throw new UpdateJobError('Rilis terbaru berubah sejak halaman dimuat. Muat ulang lalu periksa lagi.')
+    throw new UpdateJobError(
+      'Rilis terbaru berubah sejak halaman dimuat. Muat ulang lalu periksa lagi.',
+    )
   if (!check.compatible)
-    throw new UpdateJobError(check.incompatibleReason ?? 'Rilis tidak kompatibel dengan server ini.')
+    throw new UpdateJobError(
+      check.incompatibleReason ?? 'Rilis tidak kompatibel dengan server ini.',
+    )
 
   const latest: ReleaseManifest = check.latest
+  if (active.id === 'self-hosted' && !latest.rollbackSafe)
+    throw new UpdateJobError(
+      'Rilis ini mengubah skema database. Jadwalkan maintenance dengan operator sebelum memasangnya.',
+    )
   const created = await getDb().transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-update-job'))`)
     const [running] = await tx
@@ -222,8 +240,12 @@ export async function startUpdateJob(tag: string): Promise<UpdateJobView> {
     return id
   })
 
+  if (active.id === 'self-hosted') return (await jobView())!
+
   try {
     const started = await active.start({
+      jobId: created,
+      release: latest,
       version: latest.version,
       tag: latest.tag,
       commit: latest.commit,
@@ -267,9 +289,10 @@ export async function refreshUpdateJob(): Promise<UpdateJobView | null> {
     .orderBy(desc(updateJobs.createdAt))
     .limit(1)
   if (!row) return jobView()
+  if (row.adapter === 'self-hosted') return jobView()
   if (!row.externalId) return jobView()
 
-  const active = adapter()
+  const active = adapter(row.adapter)
   let state
   try {
     state = await active.status(row.externalId)
@@ -291,14 +314,23 @@ export async function refreshUpdateJob(): Promise<UpdateJobView | null> {
     return jobView()
   }
 
+  if (state.commit !== row.commit) {
+    await finish(row.id, 'failed', 'Commit deployment berbeda dari rilis yang diminta.')
+    return jobView()
+  }
   const live = await liveVersion()
-  if (live === row.toVersion) {
+  if (live?.version === row.toVersion && live.commit === row.commit) {
     await finish(row.id, 'ready', state.detail)
   } else {
     await getDb()
       .update(updateJobs)
       .set({
-        detail: [state.detail, `Versi aktif: ${live ?? 'tidak terbaca'}`].filter(Boolean).join(' · '),
+        detail: [
+          state.detail,
+          `Versi aktif: ${live?.version ?? 'tidak terbaca'}; identitas commit belum cocok`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
         updatedAt: new Date(),
       })
       .where(eq(updateJobs.id, row.id))
@@ -314,7 +346,7 @@ async function finish(id: string, status: 'ready' | 'failed', detail?: string) {
 }
 
 /** Version served by the public origin, read through the deployment's own route. */
-async function liveVersion(): Promise<string | null> {
+async function liveVersion(): Promise<{ version: string; commit: string | null } | null> {
   const base = process.env.NEXT_PUBLIC_SITE_URL?.trim()
   if (!base) return null
   try {
@@ -324,8 +356,10 @@ async function liveVersion(): Promise<string | null> {
       headers: { Accept: 'application/json' },
     })
     if (!response.ok) return null
-    const data = (await response.json()) as { version?: unknown }
-    return typeof data.version === 'string' ? data.version : null
+    const data = (await response.json()) as { version?: unknown; commit?: unknown }
+    return typeof data.version === 'string'
+      ? { version: data.version, commit: typeof data.commit === 'string' ? data.commit : null }
+      : null
   } catch {
     return null
   }

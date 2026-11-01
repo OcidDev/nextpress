@@ -14,7 +14,9 @@ export function parseStableVersion(value: string): SemanticVersion | undefined {
   const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(value.trim())
   if (!match) return undefined
   const [, major, minor, patch] = match
-  return { major: Number(major), minor: Number(minor), patch: Number(patch) }
+  const parts = [major, minor, patch].map(Number)
+  if (!parts.every(Number.isSafeInteger)) return undefined
+  return { major: parts[0]!, minor: parts[1]!, patch: parts[2]! }
 }
 
 /** Positive when `a` is newer than `b`, zero when equal, negative when older. */

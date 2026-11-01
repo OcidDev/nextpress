@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { hashPassword } from 'better-auth/crypto'
 import { sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { readPassword } from './password-prompt'
 nextEnv.loadEnvConfig(process.cwd())
 const { getDb, getPool } = await import('../lib/db/index')
 const { user, account } = await import('../lib/db/auth-schema')
@@ -16,35 +17,7 @@ try {
   if (!password) {
     if (!process.stdin.isTTY) throw new Error('ADMIN_PASSWORD diperlukan pada mode non-interaktif')
     rl.close()
-    process.stdout.write('Kata sandi (minimal 12 karakter, tidak ditampilkan): ')
-    password = await new Promise<string>((resolve, reject) => {
-      let value = ''
-      process.stdin.setRawMode(true)
-      process.stdin.resume()
-      const onData = (chunk: Buffer) => {
-        for (const char of chunk.toString()) {
-          if (char === '\u0003') {
-            cleanup()
-            reject(new Error('Dibatalkan'))
-            return
-          }
-          if (char === '\r' || char === '\n') {
-            cleanup()
-            resolve(value)
-            return
-          }
-          if (char === '\u007f') value = value.slice(0, -1)
-          else if (char >= ' ') value += char
-        }
-      }
-      function cleanup() {
-        process.stdin.setRawMode(false)
-        process.stdin.off('data', onData)
-        process.stdin.pause()
-        process.stdout.write('\n')
-      }
-      process.stdin.on('data', onData)
-    })
+    password = await readPassword()
   }
   const input = z
     .object({

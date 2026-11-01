@@ -16,8 +16,8 @@ export default async function UpdatesPage() {
         </div>
       </div>
       <p className="adminPageIntro">
-        Versi stabil yang diterbitkan di repositori resmi. Pembaruan meminta provider membangun
-        ulang tag rilis dan tidak pernah menimpa berkas instalasi yang sedang berjalan.
+        Pasang rilis stabil resmi pada instalasi Anda. Metode pemasangan mengikuti hosting; konten
+        dan pengaturan situs tetap memakai database instalasi ini.
       </p>
       <UpdateManager data={data} />
     </>

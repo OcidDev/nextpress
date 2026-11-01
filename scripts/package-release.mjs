@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import app from '../package.json' with { type: 'json' }
+import { unsafeReleasePaths } from './release-files.mjs'
 
 const tag = process.argv[2] || `v${app.version}`
 const outputDir = resolve(process.argv[3] || 'dist')
@@ -33,20 +34,10 @@ if (tagged !== commit)
 
 // Never ship installation data. Ignored files are excluded by git archive itself;
 // this catches anything that was accidentally added and tracked.
-const forbidden = [
-  /(^|\/)\.env(\.|$)/,
-  /(^|\/)\.local(\/|$)/,
-  /(^|\/)node_modules(\/|$)/,
-  /(^|\/)\.next(\/|$)/,
-  /(^|\/)(backups?|dumps?)(\/|$)/,
-  /(^|\/)\.pem$/,
-  /(^|\/)tsconfig\.tsbuildinfo$/,
-]
 // `.env.example` is the documented template; only real env files are forbidden.
 const tracked = git('ls-tree', '-r', '--name-only', commit).split('\n')
-const leaked = tracked
-  .filter((path) => path !== '.env.example')
-  .filter((path) => forbidden.some((pattern) => pattern.test(path)))
+if (!tracked.includes('LICENSE')) throw new Error('LICENSE harus disertakan dalam rilis.')
+const leaked = unsafeReleasePaths(tracked)
 if (leaked.length) {
   console.error(`Path terlarang terlacak di ${commit}:`)
   for (const path of leaked) console.error(`  ${path}`)
@@ -80,7 +71,7 @@ let added = migrations.length
 if (previous) {
   const before = git('ls-tree', '-r', '--name-only', previous, 'drizzle')
     .split('\n')
-    .filter((file) => /^\d{4}_.+\.sql$/.test(file))
+    .filter((file) => /^drizzle\/\d{4}_.+\.sql$/.test(file))
   added = migrations.length - before.length
 }
 

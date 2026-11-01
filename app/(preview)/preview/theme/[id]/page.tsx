@@ -1,7 +1,8 @@
+import { getAppearance } from '@/lib/db/queries/appearance'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { requireCapability } from '@/lib/admin'
-import { getThemePackage } from '@/lib/themes/manager'
+import { getThemeForEditor } from '@/lib/themes/manager'
 import { ThemePage } from '@/lib/themes/ThemePage'
 import { themePreviewContext } from '@/lib/themes/preview-context'
 import { ThemeLivePreview } from '@/components/admin/themes/ThemeLivePreview'
@@ -19,10 +20,13 @@ export default async function ThemePreview({
   searchParams: Promise<{ draft?: string; path?: string; revision?: string }>
 }) {
   await requireCapability('edit_theme_options')
-  const theme = await getThemePackage((await params).id)
+  const theme = await getThemeForEditor((await params).id)
   if (!theme) notFound()
   const input = await searchParams
-  const preview = await themePreviewContext(input.path)
+  const preview = await themePreviewContext(
+    input.path,
+    await getAppearance(theme, input.draft === '1'),
+  )
   return (
     <>
       <PreviewNavigation

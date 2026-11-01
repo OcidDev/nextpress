@@ -1,4 +1,4 @@
-import { canonicalRole, roleNameSchema } from '@/lib/core/roles'
+import { canManageRole, canonicalRole, roleNameSchema } from '@/lib/core/roles'
 import { getRequestRoles } from '@/lib/core/roles-server'
 import 'server-only'
 import { and, asc, count, desc, eq, isNull, or, ilike, ne, sql } from 'drizzle-orm'
@@ -148,10 +148,7 @@ export async function saveUserData(data: FormData) {
   const input = inputSchema.parse(Object.fromEntries(data))
   const roles = await getRequestRoles()
   if (!roles.get(input.role)) throw new Error('Peran tidak terdaftar.')
-  if (
-    canonicalRole(admin.user.role) !== 'administrator' &&
-    roles.get(input.role)!.capabilities.some((cap) => !admin.user.capabilities.includes(cap))
-  )
+  if (!canManageRole(admin.user.role, input.role, roles))
     throw new Error('Tidak dapat memberikan izin yang lebih tinggi dari izin sendiri.')
   if (!input.id && !input.password) throw new Error('Kata sandi wajib diisi untuk akun baru')
   const password = input.password ? await hashPassword(input.password) : undefined
@@ -169,6 +166,11 @@ export async function saveUserData(data: FormData) {
       throw new Error('Akses admin diperlukan')
     const [old] = input.id ? await tx.select().from(user).where(eq(user.id, id)).for('update') : []
     if (input.id && !old) throw new Error('Akun tidak ditemukan')
+    if (
+      !canManageRole(actor.role, input.role, roles) ||
+      (old && !canManageRole(actor.role, old.role, roles))
+    )
+      throw new Error('Tidak dapat mengubah akun dengan izin yang lebih tinggi dari izin sendiri.')
     if (
       old &&
       canonicalRole(old.role) === 'administrator' &&
@@ -376,7 +378,8 @@ const legacyAuthorInputSchema = z.object({
 })
 
 export async function saveLegacyAuthorData(data: FormData) {
-  await requireCapability('edit_users')
+  const actor = await requireCapability('edit_users')
+  const roles = await getRequestRoles()
   const input = legacyAuthorInputSchema.parse(Object.fromEntries(data))
   const db = getDb()
 
@@ -413,6 +416,10 @@ export async function saveLegacyAuthorData(data: FormData) {
     if (input.userId) {
       const [targetUser] = await tx.select().from(user).where(eq(user.id, input.userId))
       if (!targetUser) throw new Error('Akun pengguna tidak ditemukan')
+      if (!canManageRole(actor.user.role, targetUser.role, roles))
+        throw new Error(
+          'Tidak dapat mengubah akun dengan izin yang lebih tinggi dari izin sendiri.',
+        )
       const [existingUserAuthor] = await tx
         .select({ id: authors.id })
         .from(authors)

@@ -64,7 +64,7 @@
   --fontH: var(--font-sans), Arial, Helvetica, sans-serif;
   --fontB: var(--font-sans), Arial, Helvetica, sans-serif;
   --fontBa: var(--font-sans), Arial, Helvetica, sans-serif;
-  --fontC: var(--font-mono), monospace;
+  --fontC: ui-monospace, SFMono-Regular, Consolas, monospace;
   --trans-1: all 0.1s ease;
   --trans-2: all 0.2s ease;
   --trans-3: all 0.3s ease;
@@ -313,7 +313,9 @@ h3 {
 a {
   color: var(--linkC);
   text-decoration: none;
-  transition: color var(--motion-fast) var(--ease-out), opacity var(--motion-fast) var(--ease-out);
+  transition:
+    color var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out);
 }
 button,
 input,
@@ -388,7 +390,8 @@ svg .d2 {
   border-radius: var(--iconHr);
   color: inherit;
   background: transparent;
-  transition: background-color var(--motion-fast) var(--ease-out),
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
     transform var(--motion-fast) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -415,7 +418,8 @@ svg .d2 {
     padding-inline: 16px;
     border: 1px solid var(--contentL);
     border-radius: 30px;
-    transition: border-color var(--motion-fast) var(--ease-out),
+    transition:
+      border-color var(--motion-fast) var(--ease-out),
       box-shadow var(--motion-base) var(--ease-out);
   }
   .headerSearch:focus-within {
@@ -437,7 +441,8 @@ svg .d2 {
   background: transparent;
   color: inherit;
   padding: 10px 0;
-  transition: color var(--motion-fast) var(--ease-out),
+  transition:
+    color var(--motion-fast) var(--ease-out),
     opacity var(--motion-fast) var(--ease-out),
     transform var(--motion-fast) var(--ease-out);
 }
@@ -454,7 +459,8 @@ svg .d2 {
   background: var(--linkB);
   color: var(--bodyB);
   font-weight: 700;
-  transition: background-color var(--motion-fast) var(--ease-out),
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
     box-shadow var(--motion-base) var(--ease-out),
     transform var(--motion-fast) var(--ease-out),
     opacity var(--motion-fast) var(--ease-out);
@@ -509,7 +515,8 @@ body:has(dialog[open]) {
   border: 1px solid var(--contentL);
   color: var(--bodyC);
   background: var(--srchB);
-  transition: border-color var(--motion-fast) var(--ease-out),
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
     box-shadow var(--motion-base) var(--ease-out);
 }
 .searchForm input:focus,
@@ -523,7 +530,8 @@ body:has(dialog[open]) {
   border-radius: 10px;
   background: var(--contentB);
   box-shadow: 0 5px 35px rgb(0 0 0 / 7%);
-  transition: box-shadow var(--motion-base) var(--ease-out),
+  transition:
+    box-shadow var(--motion-base) var(--ease-out),
     transform var(--motion-base) var(--ease-out);
 }
 .panel > h2 {
@@ -539,7 +547,7 @@ body:has(dialog[open]) {
   margin-block-start: 10px;
 }
 
-:root[data-theme='0']:not([data-mode='dark']) .themeSite[data-design='reference'] {
+:root[data-theme='0'][data-mode='light'] .themeSite[data-design='reference'] {
   --themeC: #7500ff;
   --linkC: #7500ff;
   --linkB: #7500ff;
@@ -548,6 +556,18 @@ body:has(dialog[open]) {
   --iconC: #0d062c;
   --navT: #0d062c;
   --fotT: #0d062c;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='0'][data-mode='system'] .themeSite[data-design='reference'] {
+    --themeC: #7500ff;
+    --linkC: #7500ff;
+    --linkB: #7500ff;
+    --headC: #0d062c;
+    --bodyC: #0d062c;
+    --iconC: #0d062c;
+    --navT: #0d062c;
+    --fotT: #0d062c;
+  }
 }
 .emptyState {
   min-height: 240px;
@@ -586,14 +606,43 @@ pre {
 }
 
 /* Portable content semantics shared by every theme and the visual editor. */
-:is(.cmsRichContent, .richTextContent) { display: flow-root; }
-:is(.cmsRichContent, .richTextContent) img { max-width: 100%; height: auto; }
-:is(.cmsRichContent, .richTextContent) .cms-image { width: fit-content; max-width: 100%; }
-:is(.cmsRichContent, .richTextContent) .alignleft { float: left; margin: .5em 1.5em 1em 0; }
-:is(.cmsRichContent, .richTextContent) .alignright { float: right; margin: .5em 0 1em 1.5em; }
-:is(.cmsRichContent, .richTextContent) .aligncenter { display: block; float: none; margin: 1em auto; }
-:is(.cmsRichContent, .richTextContent) .alignnone { display: block; float: none; margin: 1em 0; }
-:is(.cmsRichContent, .richTextContent) figcaption { font-size: .85em; text-align: center; margin-top: .5em; }
+:is(.cmsRichContent, .richTextContent) {
+  display: flow-root;
+}
+:is(.cmsRichContent, .richTextContent) img {
+  max-width: 100%;
+  height: auto;
+}
+:is(.cmsRichContent, .richTextContent) .cms-image {
+  width: fit-content;
+  max-width: 100%;
+}
+:is(.cmsRichContent, .richTextContent) .alignleft {
+  float: left;
+  margin: 0.5em 1.5em 1em 0;
+}
+:is(.cmsRichContent, .richTextContent) .alignright {
+  float: right;
+  margin: 0.5em 0 1em 1.5em;
+}
+:is(.cmsRichContent, .richTextContent) .aligncenter {
+  display: block;
+  float: none;
+  margin: 1em auto;
+}
+:is(.cmsRichContent, .richTextContent) .alignnone {
+  display: block;
+  float: none;
+  margin: 1em 0;
+}
+:is(.cmsRichContent, .richTextContent) figcaption {
+  font-size: 0.85em;
+  text-align: center;
+  margin-top: 0.5em;
+}
 @media (max-width: 480px) {
-  :is(.cmsRichContent, .richTextContent) :is(.alignleft, .alignright) { float: none; margin-inline: 0; }
+  :is(.cmsRichContent, .richTextContent) :is(.alignleft, .alignright) {
+    float: none;
+    margin-inline: 0;
+  }
 }

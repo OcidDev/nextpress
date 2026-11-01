@@ -3,6 +3,9 @@
 An open source content management system built with Next.js, TypeScript,
 PostgreSQL, Drizzle ORM, and Better Auth.
 
+Licensed under [GPL-3.0-only](LICENSE). Bundled fonts retain their SIL Open Font
+Licenses; see [font notices](public/fonts/NOTICE.txt).
+
 ## Features
 
 - Articles and pages with a rich text editor, image alignment, and sizing.
@@ -16,7 +19,7 @@ PostgreSQL, Drizzle ORM, and Better Auth.
 - **Plugin engine** — install ZIP plugin packages that contribute sandboxed
   widget areas and page templates.
 - **Updates** — `Dasbor → Pembaruan` checks the official GitHub Release, then
-  deploys it through the configured adapter and verifies the version that is
+  installs it through the VPS worker or Vercel adapter and verifies the version and commit
   actually serving traffic.
 
 The default theme is Twenty Twenty-Four.
@@ -56,9 +59,9 @@ Install and manage packages from `/admin/appearance` (themes) and
 `lib/themes/package.ts` and `lib/plugins/manifest.ts`. A newly installed package
 starts inactive so its widget placements can be arranged before it goes live.
 
-Inactive themes can be deleted from the gallery. The active theme, the bundled
-recovery theme, and themes still used by a page template cannot be deleted; the
-gallery explains which pages block the removal. Deleting a theme removes only
+Inactive themes can be deleted from the gallery, including the bundled theme.
+The internal recovery copy is retained. The active theme and themes still used
+by a page template cannot be deleted; the gallery explains which pages block the removal. Deleting a theme removes only
 its package and its customizer settings. Plugins follow the same rule: disable
 the plugin first, then remove any widget placements and page templates that
 still reference it.
@@ -91,25 +94,61 @@ release from `OcidDev/nextpress` (configurable through `NEXTPRESS_RELEASE_OWNER`
 and `NEXTPRESS_RELEASE_REPOSITORY`), caches the answer for 15 minutes, and
 explains what is missing when no deployment adapter is configured.
 
-An update never runs from the web process: the browser sends only the release
-tag, the server re-validates the manifest, and the deployment adapter asks the
-hosting provider to build that tag and commit. A job is marked done only when
-`GET /api/version` on the public origin returns the target version. See
-`docs/release-contract.md` for what a release may contain and
-`docs/deployment/vercel.md` for the Vercel setup.
+The browser sends only a release tag; the server re-validates the official
+manifest. On a VPS, an independent worker verifies and installs the release
+archive, backs up the database, builds in a new directory, then switches and
+restarts the application. On Vercel, the adapter requests the official
+publisher's tag/commit in the user's project; a clone need not contain upstream
+tags. Neither method pushes to the user's repository. Completion requires the
+public origin to return the target version and commit.
+
+See [`docs/deployment/self-hosted-updates.md`](docs/deployment/self-hosted-updates.md)
+for one-time VPS worker setup and recovery. The initial VPS worker only supports
+updates with identical database migrations; schema upgrades require operator
+maintenance. Vercel configuration and provider verification requirements are in
+[`docs/deployment/vercel.md`](docs/deployment/vercel.md). The shared release
+contract is in [`docs/release-contract.md`](docs/release-contract.md).
 
 ## Validation and production build
 
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test:security
+pnpm audit --prod
 pnpm build
 pnpm start
 ```
 
 Configure environment variables and apply database migrations before deploying.
-Run these checks and manually verify changed workflows. No automated test suite
-is included.
+Run these checks and manually verify changed workflows. Browser tests require an isolated, migrated PostgreSQL database and a production
+build with `NEXT_PUBLIC_SITE_URL=http://localhost:3109`. The database test needs
+PostgreSQL client utilities (`pg_dump`, `pg_restore`, `psql`) and a test database
+role with `CREATEDB`; it creates and removes its own temporary databases:
+
+```bash
+TEST_DATABASE_URL=postgresql://user:password@localhost/nextpress_test pnpm test:db
+pnpm exec playwright install chromium
+TEST_DATABASE_URL=postgresql://user:password@localhost/nextpress_test pnpm test:e2e
+```
+
+The suite starts its own application on port 3109, creates disposable test
+accounts, and checks login with JavaScript enabled and disabled, CSRF, rate
+limits, anonymous access, editorial revisions/trash, media, import/export,
+themes, and plugins. Never point it at a production database. The database suite
+checks a populated upgrade, migration reruns and backup/restore (including media
+bytes and exclusion of sessions/tokens). CI runs these checks on Node.js 22.
+See [SECURITY.md](SECURITY.md) and the [release security review](docs/security-review-2026-10-18.md)
+for deployment requirements and remaining release checks. After deploying, run
+`pnpm release:verify https://your-domain.example` for read-only version, login-form,
+header and anonymous-access checks. Authenticated cookie flags, ingress IPs and
+optional Redis/provider integrations still need verification on the actual host.
+
+To reset an existing administrator's password, run
+`pnpm admin:reset --email=admin@example.com` and use the hidden password prompt.
+For automation, inject `ADMIN_EMAIL` and `NEW_ADMIN_PASSWORD` through your secret
+manager. Password arguments and default passwords are not supported. A reset
+revokes all sessions and preserves the account's role and active status.
 
 ## Database
 
@@ -178,3 +217,5 @@ Media referenced by revision history cannot be deleted while those revisions exi
 
 Before deploying these changes, back up the database and run `pnpm db:migrate` and
 `pnpm db:check` before starting the new application build.
+
+See [theme, plugin, and core boundaries](docs/theme-plugin-core-boundaries.md) for customization, uninstall, and recovery behavior.

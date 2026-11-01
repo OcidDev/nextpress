@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/admin'
 import { importWxrData, importBloggerData, exportWxrData } from '@/lib/db/queries/tools'
+import { IMPORT_MAX_BYTES, IMPORT_SIZE_MESSAGE } from '@/lib/import-limits'
 
 export interface ImportActionResult {
   success?: boolean
@@ -13,21 +14,18 @@ export interface ImportActionResult {
   message?: string
 }
 
-export async function importWxrAction(
-  _: unknown,
-  formData: FormData,
-): Promise<ImportActionResult> {
+export async function importWxrAction(_: unknown, formData: FormData): Promise<ImportActionResult> {
   await requireAdmin()
 
-  const file = formData.get('file') as File | null
+  const file = formData.get('file')
   const dryRun = formData.get('dryRun') === 'true'
 
-  if (!file || file.size === 0) {
+  if (!(file instanceof File) || file.size === 0) {
     return { error: 'Silakan pilih berkas XML ekspor WordPress terlebih dahulu.' }
   }
 
-  if (file.size > 20 * 1024 * 1024) {
-    return { error: 'Ukuran berkas melebihi batas maksimal 20 MB.' }
+  if (file.size > IMPORT_MAX_BYTES) {
+    return { error: IMPORT_SIZE_MESSAGE }
   }
 
   try {
@@ -48,7 +46,8 @@ export async function importWxrAction(
     }
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Terjadi kegagalan saat mengimpor berkas WXR.',
+      error:
+        error instanceof Error ? error.message : 'Terjadi kegagalan saat mengimpor berkas WXR.',
     }
   }
 }
@@ -59,15 +58,15 @@ export async function importBloggerAction(
 ): Promise<ImportActionResult> {
   await requireAdmin()
 
-  const file = formData.get('file') as File | null
+  const file = formData.get('file')
   const dryRun = formData.get('dryRun') === 'true'
 
-  if (!file || file.size === 0) {
+  if (!(file instanceof File) || file.size === 0) {
     return { error: 'Silakan pilih berkas XML ekspor Blogger terlebih dahulu.' }
   }
 
-  if (file.size > 25 * 1024 * 1024) {
-    return { error: 'Ukuran berkas melebihi batas maksimal 25 MB.' }
+  if (file.size > IMPORT_MAX_BYTES) {
+    return { error: IMPORT_SIZE_MESSAGE }
   }
 
   try {
@@ -89,7 +88,8 @@ export async function importBloggerAction(
     }
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Terjadi kegagalan saat mengimpor berkas Blogger.',
+      error:
+        error instanceof Error ? error.message : 'Terjadi kegagalan saat mengimpor berkas Blogger.',
     }
   }
 }

@@ -3,13 +3,14 @@ import { getRequestOptions, withOptionsTransaction } from '@/lib/core/options-se
 import { hasDatabase } from '@/lib/db'
 import { desc, eq, sql } from 'drizzle-orm'
 import { themePackages } from '@/lib/db/theme-schema'
-import { getActiveThemeId, getThemePackage, normalizeThemeId } from './manager'
+import { getActiveThemeId, getThemeForEditor, normalizeThemeId } from './manager'
 import {
   emptyCustomizationState,
   themeCustomizationStateSchema,
   validateThemeValues,
 } from './customization'
 import { requireCapability } from '@/lib/admin'
+import { themeRemovalKey } from './deletion'
 
 const key = (id: string) => `theme:${normalizeThemeId(id)}:customization`
 export async function getThemeCustomizationState(id: string) {
@@ -25,7 +26,7 @@ export async function changeThemeCustomization(input: {
   values?: unknown
 }) {
   await requireCapability('edit_theme_options')
-  const theme = await getThemePackage(input.themeId)
+  const theme = await getThemeForEditor(input.themeId)
   const activeAtStart = await getActiveThemeId()
   if (
     !theme ||
@@ -39,11 +40,13 @@ export async function changeThemeCustomization(input: {
     input.operation === 'save' ? validateThemeValues(theme.customization, input.values) : undefined
   return withOptionsTransaction(async (tx, options) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('cms-theme-activation'))`)
+    if ((await options.getOption(themeRemovalKey(input.themeId))) === true)
+      throw new Error('Tema sudah dihapus. Muat ulang daftar tema.')
     const [installed] = await tx
       .select({ hash: themePackages.hash })
       .from(themePackages)
       .where(eq(themePackages.id, input.themeId))
-      .orderBy(desc(themePackages.installedAt))
+      .orderBy(desc(themePackages.installedAt), desc(themePackages.hash))
       .limit(1)
     if (installed && installed.hash !== input.hash)
       throw new Error('Paket tema sudah diperbarui. Muat ulang halaman sebelum menyimpan.')

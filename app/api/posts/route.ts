@@ -1,3 +1,4 @@
+import { getThemeForEditor } from '@/lib/themes/manager'
 import { NextResponse } from 'next/server'
 import { getCmsSession } from '@/lib/admin'
 import { getAppearance, getAppearanceEditor } from '@/lib/db/queries/appearance'
@@ -22,7 +23,14 @@ export async function GET(request: Request) {
       { error: 'Sesi admin diperlukan untuk preview.' },
       { status: 401, headers: responseHeaders },
     )
-  const config = preview ? (await getAppearanceEditor()).draft.config : await getAppearance()
+  const themeId = preview ? params.get('theme') : null
+  const theme = themeId ? await getThemeForEditor(themeId) : undefined
+  if (themeId && !theme)
+    return NextResponse.json(
+      { error: 'Tema tidak tersedia.' },
+      { status: 404, headers: responseHeaders },
+    )
+  const config = preview ? (await getAppearanceEditor(theme)).draft.config : await getAppearance()
   const { collection, result, changed } = await getHomePostsPage(config, page, key)
   if (!collection.latest)
     return NextResponse.json(

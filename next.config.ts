@@ -2,6 +2,11 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: {
+    // Public build identity only. Never place credentials in next.config env.
+    NEXTPRESS_BUILD_COMMIT:
+      process.env.NEXTPRESS_RELEASE_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || '',
+  },
   skipTrailingSlashRedirect: true,
   experimental: { serverActions: { bodySizeLimit: '6mb' } },
 
@@ -39,10 +44,20 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self'; frame-src 'self'",
+            value:
+              "frame-ancestors 'self'; frame-src 'self'; form-action 'self'; base-uri 'self'; object-src 'none'",
           },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       })),
+      {
+        source: '/api/auth/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
     ]
   },
 }

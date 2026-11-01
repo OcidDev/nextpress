@@ -2,6 +2,25 @@
 
 import { useActionState, useState } from 'react'
 import { importWxrAction, importBloggerAction } from '@/server/actions/tools'
+import { IMPORT_MAX_BYTES, IMPORT_SIZE_MESSAGE } from '@/lib/import-limits'
+
+function ImportFile({ disabled }: { disabled: boolean }) {
+  return (
+    <input
+      type="file"
+      name="file"
+      accept=".xml,text/xml,application/xml"
+      required
+      disabled={disabled}
+      onChange={(event) => {
+        const input = event.currentTarget
+        const file = input.files?.[0]
+        input.setCustomValidity(file && file.size > IMPORT_MAX_BYTES ? IMPORT_SIZE_MESSAGE : '')
+        input.reportValidity()
+      }}
+    />
+  )
+}
 
 export function ImportView() {
   const [wpState, wpAction, wpPending] = useActionState(importWxrAction, {})
@@ -14,20 +33,18 @@ export function ImportView() {
       <div className="adminSettingsSection">
         <h2>WordPress Importer</h2>
         <p>
-          Impor pos, laman, komentar, bidang kustom, kategori, dan tag dari berkas ekspor WordPress (WXR / XML).
+          Impor judul, slug, isi, dan status pos/laman dari WordPress (WXR / XML). Komentar, media,
+          bidang kustom, kategori, dan tag WordPress belum diimpor.
         </p>
+        <p>{IMPORT_SIZE_MESSAGE} Maksimal 1.000 pos/laman per berkas.</p>
         <form action={wpAction} className="adminForm">
           <label>
             Pilih berkas WXR (.xml)
-            <input
-              type="file"
-              name="file"
-              accept=".xml,text/xml"
-              required
-              disabled={wpPending}
-            />
+            <ImportFile disabled={wpPending} />
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          >
             <input
               type="checkbox"
               name="dryRun"
@@ -38,8 +55,16 @@ export function ImportView() {
             />
             Simulasi saja (Dry run - jangan simpan ke basis data)
           </label>
-          {wpState.error && <p role="alert" style={{ color: '#ef4444', fontWeight: 500 }}>{wpState.error}</p>}
-          {wpState.message && <p role="status" style={{ color: '#10b981', fontWeight: 500 }}>{wpState.message}</p>}
+          {wpState.error && (
+            <p role="alert" style={{ color: '#ef4444', fontWeight: 500 }}>
+              {wpState.error}
+            </p>
+          )}
+          {wpState.message && (
+            <p role="status" style={{ color: '#10b981', fontWeight: 500 }}>
+              {wpState.message}
+            </p>
+          )}
           <button type="submit" className="button" disabled={wpPending}>
             {wpPending ? 'Memproses Berkas WXR…' : 'Jalankan Pengimpor WordPress'}
           </button>
@@ -49,20 +74,18 @@ export function ImportView() {
       <div className="adminSettingsSection" style={{ marginTop: '2rem' }}>
         <h2>Blogger Importer</h2>
         <p>
-          Impor artikel, laman statis, dan label dari berkas cadangan Google Blogger (Atom XML / blog-MM-DD-YYYY.xml).
+          Impor artikel, laman statis, dan label dari berkas cadangan Google Blogger (Atom XML /
+          blog-MM-DD-YYYY.xml).
         </p>
+        <p>{IMPORT_SIZE_MESSAGE} Maksimal 2.000 pos/laman per berkas.</p>
         <form action={bloggerAction} className="adminForm">
           <label>
             Pilih berkas cadangan Blogger (.xml)
-            <input
-              type="file"
-              name="file"
-              accept=".xml,text/xml"
-              required
-              disabled={bloggerPending}
-            />
+            <ImportFile disabled={bloggerPending} />
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          >
             <input
               type="checkbox"
               name="dryRun"
@@ -73,8 +96,16 @@ export function ImportView() {
             />
             Simulasi saja (Dry run - jangan simpan ke basis data)
           </label>
-          {bloggerState.error && <p role="alert" style={{ color: '#ef4444', fontWeight: 500 }}>{bloggerState.error}</p>}
-          {bloggerState.message && <p role="status" style={{ color: '#10b981', fontWeight: 500 }}>{bloggerState.message}</p>}
+          {bloggerState.error && (
+            <p role="alert" style={{ color: '#ef4444', fontWeight: 500 }}>
+              {bloggerState.error}
+            </p>
+          )}
+          {bloggerState.message && (
+            <p role="status" style={{ color: '#10b981', fontWeight: 500 }}>
+              {bloggerState.message}
+            </p>
+          )}
           <button type="submit" className="button" disabled={bloggerPending}>
             {bloggerPending ? 'Memproses Berkas Blogger…' : 'Jalankan Pengimpor Blogger'}
           </button>

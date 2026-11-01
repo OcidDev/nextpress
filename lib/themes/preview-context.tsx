@@ -1,3 +1,4 @@
+import type { Appearance } from '@/lib/content/appearance'
 import 'server-only'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -26,12 +27,13 @@ import type { ReactNode } from 'react'
 
 export async function themePreviewContext(
   raw = '/',
+  appearanceOverride?: Appearance,
 ): Promise<{ query: TemplateQueryContext; context: Partial<BlockContext>; content: ReactNode }> {
   if (!/^\/(?!\/)/.test(raw) || /[\\\u0000-\u001f]/.test(raw)) notFound()
   const url = new URL(raw, 'http://cms.local')
   const path = url.pathname,
     page = pageNumber(url.searchParams.get('page'))
-  const appearance = await getAppearance()
+  const appearance = appearanceOverride ?? (await getAppearance())
   const article = await findPublicPostRoute(
     path + (url.searchParams.has('p') ? `?p=${url.searchParams.get('p')}` : ''),
   )

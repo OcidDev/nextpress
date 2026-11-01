@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { requireCapability } from '@/lib/admin'
 import type { AppearanceActionState } from '@/lib/content/appearance'
-import { getActiveThemeId } from '@/lib/themes/manager'
 import {
   AppearanceValidationError,
   applyAppearanceData,
@@ -13,6 +12,18 @@ import {
   restoreAppearanceData,
   saveAppearanceData,
 } from '@/lib/db/queries/appearance'
+
+const targetSchema = z.object({
+  themeId: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+  hash: z.string().regex(/^[a-f0-9]{64}$/),
+  activeThemeId: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+})
+const target = (data: FormData) =>
+  targetSchema.parse({
+    themeId: data.get('themeId'),
+    hash: data.get('hash'),
+    activeThemeId: data.get('activeThemeId'),
+  })
 
 const revisionSchema = z
   .string()
@@ -39,6 +50,7 @@ export async function saveAppearance(
     const draft = await saveAppearanceData(
       JSON.parse(String(data.get('config'))),
       revisionSchema.parse(data.get('revision')),
+      target(data),
     )
     revalidatePath('/admin/site-editor')
     return { success: 'Rancangan tersimpan. Situs publik belum berubah.', revision: draft.revision }
@@ -53,7 +65,10 @@ export async function applyAppearance(
 ): Promise<AppearanceActionState> {
   await requireCapability('edit_theme_options')
   try {
-    const active = await applyAppearanceData(revisionSchema.parse(data.get('revision')))
+    const active = await applyAppearanceData(
+      revisionSchema.parse(data.get('revision')),
+      target(data),
+    )
     revalidatePath('/', 'layout')
     return { success: 'Tampilan diterapkan ke situs.', revision: active.revision }
   } catch (error) {
@@ -67,12 +82,12 @@ export async function discardAppearance(
 ): Promise<AppearanceActionState> {
   await requireCapability('edit_theme_options')
   try {
-    await discardAppearanceData(revisionSchema.parse(data.get('revision')))
+    await discardAppearanceData(revisionSchema.parse(data.get('revision')), target(data))
   } catch (error) {
     return errorState(error)
   }
   revalidatePath('/admin/site-editor')
-  redirect(`/admin/site-editor?theme=${await getActiveThemeId()}`)
+  redirect(`/admin/site-editor?theme=${target(data).themeId}&panel=layout`)
 }
 
 export async function restoreAppearance(
@@ -81,10 +96,10 @@ export async function restoreAppearance(
 ): Promise<AppearanceActionState> {
   await requireCapability('edit_theme_options')
   try {
-    await restoreAppearanceData(revisionSchema.parse(data.get('revision')))
+    await restoreAppearanceData(revisionSchema.parse(data.get('revision')), target(data))
   } catch (error) {
     return errorState(error)
   }
   revalidatePath('/', 'layout')
-  redirect(`/admin/site-editor?theme=${await getActiveThemeId()}`)
+  redirect(`/admin/site-editor?theme=${target(data).themeId}&panel=layout`)
 }

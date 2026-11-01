@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { requireCapability } from '@/lib/admin'
 import { getDb, hasDatabase } from '@/lib/db'
 import { pages, plugins, options } from '@/lib/db/schema'
@@ -268,16 +268,17 @@ export async function uninstallPluginData(id: string, revision: number, discardP
     guardRevision(current, revision)
     if (current.enabled) throw new PluginValidationError('Nonaktifkan plugin sebelum menghapusnya.')
     const references = await pluginReferences(tx, id)
-    if (references.some((reference) => reference.key !== 'appearance:previous'))
+    if (references.some((reference) => !reference.key.endsWith('appearance:previous')))
       throw new PluginValidationError(
         'Plugin masih digunakan di rancangan atau tampilan aktif. Hapus bagian/widget plugin dan terapkan tampilan bersih sebelum mencoba lagi.',
       )
-    if (references.some((reference) => reference.key === 'appearance:previous')) {
+    if (references.some((reference) => reference.key.endsWith('appearance:previous'))) {
       if (!discardPrevious)
         throw new PluginValidationError(
           'Plugin masih digunakan oleh versi pemulihan Tampilan. Pilih Hapus versi pemulihan Tampilan yang memakai plugin ini untuk menghapus plugin beserta versi pemulihan tersebut.',
         )
-      await optionApi.deleteOption('appearance:previous')
+      for (const key of new Set(references.map((reference) => reference.key)))
+        await optionApi.deleteOption(key)
     }
     // Page templates contributed by the plugin are referenced by pages themselves,
     // not by appearance revisions. Drafts and Trash count too: restoring the page
@@ -290,7 +291,10 @@ export async function uninstallPluginData(id: string, revision: number, discardP
       const labels = { draft: 'draf', published: 'terbit', trash: 'Sampah' } as const
       const names = inUse
         .slice(0, 5)
-        .map((page) => `"${page.title}" (${labels[page.status as keyof typeof labels] ?? page.status})`)
+        .map(
+          (page) =>
+            `"${page.title}" (${labels[page.status as keyof typeof labels] ?? page.status})`,
+        )
         .join(', ')
       throw new PluginValidationError(
         `Plugin masih dipakai template halaman: ${names}${inUse.length > 5 ? ` dan ${inUse.length - 5} halaman lain` : ''}. Pilih template lain pada halaman tersebut sebelum menghapus plugin.`,
@@ -339,7 +343,9 @@ async function pluginReferences(tx: PluginTransaction, id: string) {
   const rows = await tx
     .select({ id: options.name, value: options.value })
     .from(options)
-    .where(inArray(options.name, ['appearance:active', 'appearance:draft', 'appearance:previous']))
+    .where(
+      sql`(${options.name} in ('appearance:active', 'appearance:draft', 'appearance:previous') and not exists (select 1 from cms_options legacy_claim where legacy_claim.name = 'appearance:legacy-owner')) or ${options.name} ~ '^theme:[a-z][a-z0-9-]*:appearance:(active|draft|previous)$'`,
+    )
   return rows.flatMap((row) =>
     appearanceReferences(row.value, id).map((reference) => ({ key: row.id, ...reference })),
   )

@@ -15,8 +15,8 @@ Halaman pembaruan (Tahap 4) hanya boleh menawarkan rilis yang memenuhi kontrak i
 - Pre-release dan tag non-semver ditolak. Versi yang dipakai berbentuk
   `MAJOR.MINOR.PATCH`, tanpa sufiks `-rc`, `-beta`, atau metadata build.
 - `NEXTPRESS_GITHUB_TOKEN` opsional. Nilainya hanya dibaca di server untuk menaikkan
-  batas permintaan API GitHub atau membaca repositori privat; token tidak pernah
-  dikirim ke browser.
+  batas permintaan API GitHub; token tidak pernah dikirim ke browser. Pengunduh
+  aset saat ini membutuhkan Release dengan aset yang dapat dibaca publik.
 
 ## Bentuk setiap rilis
 
@@ -92,7 +92,32 @@ Pembaruan mengganti kode NextPress, bukan isi situs. Saat memasang versi baru:
 Konsekuensinya: perubahan source lokal pada file core akan tertimpa saat pembaruan.
 Instalasi yang perlu kustomisasi harus memakai paket tema/plugin, pengaturan inti,
 atau fork dengan versi sendiri — bukan mengedit file core di server produksi.
-Adapter pemasangan (Tahap 5) wajib memeriksa perubahan source lokal sebelum menimpa.
+Worker VPS memeriksa perubahan source lokal sebelum mengganti versi aktif.
+Adapter Vercel memakai source resmi dan tidak menggabungkan commit kustom pada
+clone. Operator yang memerlukan perubahan core harus memakai penerbit rilis fork.
+
+## Pemasangan pada instalasi independen
+
+Instalasi tidak perlu memiliki tag baru pada clone sendiri. Dashboard membaca
+Release penerbit, sedangkan proyek hosting, database, dan konfigurasi tetap milik
+pengguna. Adapter dipilih melalui `NEXTPRESS_DEPLOY_ADAPTER`: `vercel` atau
+`self-hosted`. Bila kosong, lingkungan Vercel memilih `vercel`; host lain memilih
+`self-hosted`. Nilai yang tidak dikenal ditolak.
+
+- VPS: worker terpisah mengambil job database, memverifikasi arsip SHA-256,
+  metadata commit, versi paket, ukuran, dan keamanan path. Ia membuat backup,
+  build di direktori baru, menukar symlink, restart, dan memeriksa versi/commit.
+  Versi awal ini hanya menerima journal/SQL migrasi yang identik; upgrade schema
+  memerlukan maintenance manual. Lihat `deployment/self-hosted-updates.md`.
+- Vercel: adapter menemukan repository penerbit melalui API GitHub lalu meminta
+  deployment pada proyek pengguna dengan tag/commit resmi yang dipin. Adapter
+  ini tidak mengunduh atau memverifikasi byte arsip; identitas deployment diperiksa
+  lewat commit provider dan `/api/version`. Akses provider lintas repository perlu
+  diverifikasi pada akun tujuan. Lihat `deployment/vercel.md`.
+
+Update tidak selesai hanya karena build diterima: versi dan commit pada origin
+publik harus cocok. Worker yang terputus meninggalkan journal recovery dan
+mengunci pemasangan berikutnya sampai operator memeriksa keadaan instalasi.
 
 ## Penerbitan
 

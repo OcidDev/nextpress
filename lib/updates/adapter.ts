@@ -1,4 +1,4 @@
-import 'server-only'
+import type { ReleaseManifest } from './manifest'
 
 /**
  * A deployment adapter applies a verified release to the installation that is
@@ -6,9 +6,11 @@ import 'server-only'
  * shell command from the browser, only a validated release manifest.
  */
 export type DeploymentTarget = {
+  jobId: string
   version: string
   tag: string
   commit: string
+  release: ReleaseManifest
 }
 
 export type DeploymentStart = {
@@ -18,7 +20,7 @@ export type DeploymentStart = {
 
 export type DeploymentState =
   | { state: 'pending'; detail?: string }
-  | { state: 'ready'; detail?: string }
+  | { state: 'ready'; detail?: string; commit?: string }
   | { state: 'failed'; detail: string }
 
 export type DeploymentAdapter = {
@@ -27,7 +29,7 @@ export type DeploymentAdapter = {
   /** Human-readable setup hint shown when the adapter is not configured. */
   label: string
   /** Why this installation cannot update itself through this adapter, if any. */
-  missing(): string[]
+  missing(): string[] | Promise<string[]>
   start(target: DeploymentTarget): Promise<DeploymentStart>
   status(externalId: string): Promise<DeploymentState>
 }
