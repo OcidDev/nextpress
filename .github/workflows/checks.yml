@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Keep PostgreSQL 16 clients available from the runner's Ubuntu repository.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:

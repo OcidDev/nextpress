@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    # Match the verified CI image and its PostgreSQL 16 client packages.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
