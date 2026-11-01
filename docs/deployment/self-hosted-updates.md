@@ -14,7 +14,10 @@ lain yang dipercaya operator. Aset rilis harus dapat diunduh dari GitHub.
 ## Kontrak instalasi
 
 Worker mendukung Linux, Node.js >=22, pnpm sesuai `packageManager`, PostgreSQL,
-`pg_dump` dan `pg_restore` yang kompatibel dengan versi server. Sediakan minimal
+`pg_dump` dan `pg_restore` dengan versi mayor yang sama dengan server database.
+Periksa versi keduanya pada PATH service, bukan hanya shell operator. Contoh
+service di bawah memakai client PostgreSQL 16 pada Debian/Ubuntu; sesuaikan
+direktori tersebut jika server memakai versi lain. Sediakan minimal
 2 GiB kosong untuk staging/build **ditambah ruang backup database**. Worker
 menolak kegagalan backup atau build dan tidak menghapus backup/rilis lama otomatis;
 operator menetapkan retensi dan memantau kapasitas disk.
@@ -88,7 +91,7 @@ After=network.target
 User=nextpress
 WorkingDirectory=/srv/nextpress/current
 EnvironmentFile=/srv/nextpress/shared/.env.local
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/usr/lib/postgresql/16/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/env pnpm start
 Restart=on-failure
 UMask=0077
@@ -109,7 +112,7 @@ After=network.target nextpress.service
 User=nextpress
 WorkingDirectory=/srv/nextpress/current
 EnvironmentFile=/srv/nextpress/shared/.env.local
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/usr/lib/postgresql/16/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/env pnpm update:worker
 Restart=always
 RestartSec=5

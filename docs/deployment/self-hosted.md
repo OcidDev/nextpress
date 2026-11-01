@@ -195,6 +195,13 @@ Rollback kode tidak membatalkan migrasi database. Bila manifest rilis menyatakan
 
 ## 9. Backup dan pemulihan
 
+- Gunakan `pg_dump` dan `pg_restore` dengan versi mayor yang sama dengan server
+  sumber dan target pemulihan. Untuk PostgreSQL 16 pada Debian/Ubuntu, pasang
+  `postgresql-client-16` dan letakkan `/usr/lib/postgresql/16/bin` di awal `PATH`
+  shell maupun service worker. Periksa `pg_dump --version` dan
+  `pg_restore --version`; wrapper bawaan dapat memilih versi lain yang terpasang.
+  Alat yang lebih baru dapat menghasilkan SQL yang ditolak server lama, misalnya
+  `SET transaction_timeout` pada PostgreSQL 16.
 - `pnpm db:backup <file.dump>` memakai `pg_dump` format custom, menolak menimpa
   berkas yang sudah ada, dan melewati tabel sesi/verifikasi/rate-limit.
 - `pnpm db:restore <file.dump> <nama-database>` memakai `RESTORE_DATABASE_URL`
